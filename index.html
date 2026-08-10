@@ -2,75 +2,218 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Stardust Radar</title>
+    <title>Radar - OSINT</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #0b0f19; color: #fff; padding: 20px; }
-        .card { background: #131a2b; border: 1px solid #2a3b5c; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        input, button { padding: 8px; margin: 5px; border-radius: 4px; }
-        button { background: #00ffcc; border: none; font-weight: bold; cursor: pointer; }
-        .result-item { background: #1f2d44; padding: 10px; margin-top: 10px; border-left: 3px solid #00ffcc; }
+        :root { 
+            --bg: #0b0f19; --card: #131a2b; --border: #2a3b5c; 
+            --accent: #00ffcc; --text: #fff; --muted: #8fa3c7;
+            --red: #ff5252; --orange: #ff9800; --yellow: #ffcc00;
+        }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 20px; 
+            margin: 0;
+        }
+        h1 { color: var(--accent); font-size: 24px; margin-bottom: 10px;}
+        
+        .status-panel {
+            background: #1f2d44;
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            max-width: 900px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .status-info { font-size: 13px; line-height: 1.5; }
+        
+        .card { 
+            background: var(--card); 
+            border: 1px solid var(--accent); 
+            padding: 20px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
+            max-width: 900px;
+            box-sizing: border-box;
+        }
+        
+        .controls { 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            margin-bottom: 15px; 
+        }
+        input[type="number"], input[type="text"] { 
+            padding: 9px; 
+            background: #131a2b; 
+            color: var(--text); 
+            border: 1px solid var(--border); 
+            border-radius: 6px; 
+            box-sizing: border-box;
+        }
+        input[type="number"] { width: 110px; }
+        input[type="text"] { flex: 1; min-width: 250px; }
+        
+        button { 
+            padding: 9px 20px; 
+            border: none; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            background: var(--accent); 
+            color: var(--bg);
+        }
+        button:hover { opacity: 0.8; }
+        
+        .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .result-item { 
+            background: #1f2d44; 
+            padding: 10px; 
+            border-radius: 6px; 
+            border-left: 4px solid var(--border); 
+        }
     </style>
 </head>
 <body>
 
-    <h1>Радар </h1>
-    <p></p>
-
+    <h1>🛰️ Внешний радар OSINT</h1>
+    
+    <!-- Панель статуса -->
+    <div class="status-panel" id="serverStatusPanel">
+        <div class="status-info">
+            <span style="color: var(--muted);">Подключение к серверу...</span>
+        </div>
+        <button style="padding: 5px 10px; font-size: 12px; background: transparent; border: 1px solid var(--muted); color: var(--muted);" onclick="checkServerStatus()">🔄 Обновить статус</button>
+    </div>
+    
     <div class="card">
-        <h3>Тактический сканер</h3>
-        <input type="number" id="targetX" placeholder="Координата X" value="0">
-        <input type="number" id="targetY" placeholder="Координата Y" value="0">
-        <input type="number" id="minDist" placeholder="Слепая зона" value="0">
-        <label><input type="checkbox" id="ignoreAllies"> Игнорировать своих</label>
-        <button onclick="searchTargets()">Найти врагов</button>
-
-        <div id="targetResults"></div>
+        <h3 style="color: var(--accent); margin-top: 0;">🎯 Глобальный поиск</h3>
+        <p style="color: var(--muted); font-size: 13px;">Поиск баз в заданном радиусе (до 100 объектов).</p>
+        
+        <div class="controls">
+            <input type="number" id="targetX" placeholder="Ось X">
+            <span style="color: var(--muted);">:</span>
+            <input type="number" id="targetY" placeholder="Ось Y">
+            <input type="number" id="minDist" placeholder="Слепая зона" title="Не показывать объекты ближе этой дистанции">
+            <input type="number" id="maxDist" placeholder="Радиус (макс)" title="Искать не дальше этой дистанции (оставь пустым для всей галактики)">
+        </div>
+        <div class="controls">
+            <input type="text" id="ignorePlayers" placeholder="Игнорировать игроков (имена через запятую)">
+            <button onclick="searchTargets()">Сканировать сектор</button>
+        </div>
+        
+        <div style="margin-bottom: 15px; font-size: 13px; color: var(--accent); font-weight: bold;" id="statsLabel"></div>
+        <div id="targetResults" class="results"></div>
     </div>
 
     <script>
-        // ВАЖНО: Здесь укажи свой реальный HTTPS адрес от KeenDNS
-        const API_BASE_URL = 'https://твой-домен.keenetic.pro'; 
+        const API_BASE_URL = 'https://sde.domedome.crazedns.ru'; 
+
+        async function checkServerStatus() {
+            const panel = document.querySelector('#serverStatusPanel .status-info');
+            panel.innerHTML = '<span style="color: var(--muted);">Обновление данных...</span>';
+            
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/status`);
+                if (!res.ok) throw new Error('Ошибка сети');
+                const data = await res.json();
+                
+                let radarStatus = '';
+                if (data.isScannerRunning) {
+                    radarStatus = `<strong style="color: var(--accent);">🔄 Сканирование (${data.scannerProgress} / ${data.scannerTotal})</strong>`;
+                } else if (!data.scannerEnabled) {
+                    radarStatus = `<span style="color: var(--muted);">Выключен</span>`;
+                } else if (data.lastScannerError) {
+                    radarStatus = `<strong style="color: var(--red);">Ошибка сканирования</strong>`;
+                } else {
+                    radarStatus = `<strong style="color: var(--yellow);">Спит (по расписанию)</strong>`;
+                }
+
+                panel.innerHTML = `
+                    <div style="margin-bottom: 4px;">
+                        <span style="color: var(--muted);">Свежая запись в БД:</span> 
+                        <strong style="color: #fff;">${data.lastEventTime}</strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--muted);">Состояние парсера:</span> 
+                        ${radarStatus}
+                    </div>
+                `;
+            } catch (e) {
+                console.error(e);
+                panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>';
+            }
+        }
 
         async function searchTargets() {
             const x = document.getElementById('targetX').value;
             const y = document.getElementById('targetY').value;
-            const minDist = document.getElementById('minDist').value;
-            const ignoreAllies = document.getElementById('ignoreAllies').checked;
-            const resultsDiv = document.getElementById('targetResults');
+            const md = document.getElementById('minDist').value || 0;
+            const maxD = document.getElementById('maxDist').value || 0;
+            const ignPlayers = document.getElementById('ignorePlayers').value;
+            
+            const resDiv = document.getElementById('targetResults');
+            const statsLabel = document.getElementById('statsLabel');
 
-            resultsDiv.innerHTML = '<i>Загрузка данных с сервера...</i>';
+            if (x === '' || y === '') { 
+                resDiv.innerHTML = '<span style="color:var(--red);">Введите координаты X и Y</span>'; 
+                statsLabel.innerText = '';
+                return; 
+            }
+            
+            resDiv.innerHTML = '<span style="color:var(--yellow);">Запрос к базе данных...</span>';
+            statsLabel.innerText = '';
 
             try {
-                // Делаем fetch запрос к твоему C# серверу
-                const response = await fetch(`${API_BASE_URL}/api/nearest?x=${x}&y=${y}&minDist=${minDist}&ignoreAllies=${ignoreAllies}`);
+                // Обращаемся к новому эндпоинту global-nearest!
+                const res = await fetch(`${API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
+                if (!res.ok) throw new Error('Network error');
                 
-                if (!response.ok) throw new Error('Ошибка сети');
-                
-                const data = await response.json(); // Получаем ответ из C# (список объектов)
+                const data = await res.json();
 
-                if (data.length === 0) {
-                    resultsDiv.innerHTML = '<p style="color:gray;">Никого не найдено.</p>';
-                    return;
+                if (data.length === 0) { 
+                    resDiv.innerHTML = '<span style="color:var(--muted);">В заданном радиусе никого не найдено.</span>'; 
+                    return; 
                 }
 
-                // Отрисовываем результаты
+                statsLabel.innerText = `Найдено объектов: ${data.length}`;
                 let html = '';
-                data.forEach(target => {
+                
+                data.forEach((t) => {
+                    let bColor = 'var(--muted)';
+                    if (t.Distance <= 200) bColor = 'var(--red)';
+                    else if (t.Distance <= 500) bColor = 'var(--orange)';
+                    else if (t.Distance <= 1000) bColor = 'var(--yellow)';
+                    else if (t.Distance <= 2000) bColor = 'var(--accent)';
+
+                    let fStyle = t.IsMoving ? 'font-style: italic;' : '';
+                    
                     html += `
-                    <div class="result-item">
-                        <strong>Игрок: ${target.PlayerName}</strong> <br>
-                        Дистанция: ${target.Distance} | Координаты: ${target.X}:${target.Y} <br>
-                        ${target.IsMoving ? '⚠️ В движении' : 'Статичен'}
+                    <div class="result-item" style="border-left-color: ${bColor}; ${fStyle}">
+                        <div style="color:${bColor}; font-weight:bold; margin-bottom:5px;">Дистанция: ${t.Distance}</div>
+                        <div style="font-size:15px; color:#fff; font-weight:bold;">${t.PlayerName}</div>
+                        <div style="font-size:13px; color:var(--muted);">Координаты: <span style="color:#fff;">${t.X}:${t.Y}</span></div>
+                        <div style="font-size:12px; color:var(--muted); margin-top: 4px;">Система: ${t.SystemName || 'Без названия'}</div>
+                        ${t.IsMoving ? '<div style="font-size: 11px; color: var(--orange); margin-top: 4px;">⚠️ В движении</div>' : ''}
                     </div>`;
                 });
-                
-                resultsDiv.innerHTML = html;
-
-            } catch (error) {
-                console.error(error);
-                resultsDiv.innerHTML = '<p style="color:red;">Ошибка соединения с домашним сервером.</p>';
+                resDiv.innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером. Убедись, что бэкенд обновлен и запущен.</span>';
             }
         }
+
+        window.onload = checkServerStatus;
     </script>
 </body>
 </html>
