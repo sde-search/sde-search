@@ -502,44 +502,12 @@
             ctx.moveTo(0, hw); ctx.lineTo(cw, hw); 
             ctx.stroke();
 
-            // Если сильный зум — рисуем клеточную сетку галактики вплотную
-            if (scale > 10) {
-                ctx.strokeStyle = '#111827';
-                ctx.lineWidth = 0.5 / scale;
-                ctx.beginPath();
-                // Шаг сетки (например, каждые 10000 единиц)
-                let step = 10000;
-                for (let x = -320000; x <= 320000; x += step) {
-                    let p1 = getC(x, -160000);
-                    let p2 = getC(x, 480000);
-                    ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
-                }
-                for (let y = -160000; y <= 480000; y += step) {
-                    let p1 = getC(-320000, y);
-                    let p2 = getC(320000, y);
-                    ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
-                }
-                ctx.stroke();
-            }
-
-            // Ориентир 1: Солнце
-            let sun = getC(0, 0);
-            ctx.fillStyle = '#ffcc00';
-            ctx.beginPath(); ctx.arc(sun.cx, sun.cy, 6 / scale, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'rgba(255, 204, 0, 0.2)';
-            ctx.beginPath(); ctx.arc(sun.cx, sun.cy, 12 / scale, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#8fa3c7'; 
-            ctx.font = `${11 / scale}px Arial`; 
-            ctx.fillText('Sun (0:0)', sun.cx + (10/scale), sun.cy + (4/scale));
-
-            // Ориентир 2: Черная дыра
-            let bh = getC(0, 160000);
-            ctx.fillStyle = '#b388ff';
-            ctx.beginPath(); ctx.arc(bh.cx, bh.cy, 5 / scale, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'rgba(179, 136, 255, 0.2)';
-            ctx.beginPath(); ctx.arc(bh.cx, bh.cy, 10 / scale, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#8fa3c7'; 
-            ctx.fillText('Blackhole', bh.cx + (10/scale), bh.cy + (4/scale));
+            // Динамический размер ячейки: строго равен размеру шага сетки мира в пикселях холста
+            // (например, каждая система/ячейка занимает ровно расчетную область, масштабируясь вплотную)
+            let worldStep = 3000; // Условный размер одной ячейки системы в мире
+            let size = (worldStep / 640000) * cw * scale; 
+            // Защита: если при отдалении ячейки становятся меньше 2 пикселей, не даем им сливаться в кашу
+            if (size < 2) size = 2; 
 
             // Собираем точки в мозаику
             let coordMap = new Map(); 
@@ -554,39 +522,38 @@
                 });
             });
 
-            // РУХОЙ МАСШТАБ ЯЧЕЕК: размер привязан к зуму, чтобы при приближении они смыкались в сплошное поле!
-            // Базовый размер ячейки равен пропорции мира игры (например, каждая система/квадрат имеет размер около 4000 единиц)
-            let worldCellSize = 6000; 
-
+            // Отрисовка мозаики вплотную друг к другу
             coordMap.forEach((cell) => {
-                let c = getC(cell.x, cell.y);
-                if (c.cx < 0 || c.cx > cw || c.cy < 0 || c.cy > cw) return;
+                let baseC = getC(cell.x, cell.y);
+                // Превращаем игровые координаты в экранные с учетом зума и смещения камеры
+                let screenX = baseC.cx * scale;
+                let screenY = baseC.cy * scale;
 
-                // Переводим игровые единицы в пиксели холста с учетом текущего scale
-                let size = (worldCellSize / 640000) * cw; 
                 let half = size / 2;
                 let count = cell.items.length;
 
                 if (count === 1) {
                     let item = cell.items[0];
                     ctx.fillStyle = item.color;
-                    ctx.fillRect(c.cx - half, c.cy - half, size, size);
+                    ctx.fillRect(screenX - half, screenY - half, size, size);
 
-                    // Видимые границы ячеек мозаики
+                    // Тонкие границы между ячейками мозаики
                     ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1.5 / scale;
-                    ctx.strokeRect(c.cx - half, c.cy - half, size, size);
+                    ctx.lineWidth = 1 / scale;
+                    ctx.strokeRect(screenX - half, screenY - half, size, size);
 
-                    if (item.isMoving) {
+                    // Если флот в движении — рисуем внутренний квадратик
+                    if (item.isMoving && size > 6) {
                         ctx.fillStyle = '#0b0f19';
-                        ctx.fillRect(c.cx - half/2, c.cy - half/2, size/2, size/2);
+                        ctx.fillRect(screenX - half/2, screenY - half/2, size/2, size/2);
                     }
                 } else {
+                    // Если в одной системе несколько объектов — делим ячейку на сектора
                     let subSizes = [
-                        { x: c.cx - half, y: c.cy - half, w: half, h: half }, 
-                        { x: c.cx,        y: c.cy - half, w: half, h: half }, 
-                        { x: c.cx - half, y: c.cy,        w: half, h: half }, 
-                        { x: c.cx,        y: c.cy,        w: half, h: half }  
+                        { x: screenX - half, y: screenY - half, w: half, h: half }, 
+                        { x: screenX,        y: screenY - half, w: half, h: half }, 
+                        { x: screenX - half, y: screenY,        w: half, h: half }, 
+                        { x: screenX,        y: screenY,        w: half, h: half }  
                     ];
 
                     cell.items.forEach((item, idx) => {
@@ -596,10 +563,25 @@
                     });
 
                     ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(c.cx - half, c.cy - half, size, size);
+                    ctx.lineWidth = 1.5 / scale;
+                    ctx.strokeRect(screenX - half, screenY - half, size, size);
                 }
             });
+
+            // Ориентир 1: Солнце
+            let sun = getC(0, 0);
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath(); ctx.arc(sun.cx * scale, sun.cy * scale, Math.max(4, 6 / scale), 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8fa3c7'; 
+            ctx.font = `${Math.max(10, 11 / scale)}px Arial`; 
+            ctx.fillText('Sun (0:0)', (sun.cx * scale) + 10, (sun.cy * scale) + 4);
+
+            // Ориентир 2: Черная дыра
+            let bh = getC(0, 160000);
+            ctx.fillStyle = '#b388ff';
+            ctx.beginPath(); ctx.arc(bh.cx * scale, bh.cy * scale, Math.max(4, 5 / scale), 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8fa3c7'; 
+            ctx.fillText('Blackhole', (bh.cx * scale) + 10, (bh.cy * scale) + 4);
 
             ctx.restore();
         }
