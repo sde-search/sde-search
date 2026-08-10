@@ -344,7 +344,7 @@
             // Hit Detection (Наведение курсора)
             let hoveredItems = [];
             let hoverCoords = null;
-            let minHitDist = 8; 
+            let minHitDist = 12; 
 
             activeMapPlayers.forEach(p => {
                 p.tracks.forEach(t => {
@@ -484,6 +484,7 @@
             ctx.translate(offsetX, offsetY);
             ctx.scale(scale, scale);
 
+            // Тонкие линии сетки ромба
             ctx.lineWidth = 1 / scale;
 
             ctx.strokeStyle = '#2a3b5c';
@@ -500,6 +501,26 @@
             ctx.moveTo(hw, 0); ctx.lineTo(hw, cw); 
             ctx.moveTo(0, hw); ctx.lineTo(cw, hw); 
             ctx.stroke();
+
+            // Если сильный зум — рисуем клеточную сетку галактики вплотную
+            if (scale > 10) {
+                ctx.strokeStyle = '#111827';
+                ctx.lineWidth = 0.5 / scale;
+                ctx.beginPath();
+                // Шаг сетки (например, каждые 10000 единиц)
+                let step = 10000;
+                for (let x = -320000; x <= 320000; x += step) {
+                    let p1 = getC(x, -160000);
+                    let p2 = getC(x, 480000);
+                    ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
+                }
+                for (let y = -160000; y <= 480000; y += step) {
+                    let p1 = getC(-320000, y);
+                    let p2 = getC(320000, y);
+                    ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
+                }
+                ctx.stroke();
+            }
 
             // Ориентир 1: Солнце
             let sun = getC(0, 0);
@@ -533,14 +554,16 @@
                 });
             });
 
-            // Отрисовка мозаики (квадраты со стабильным размером при зуме)
-            let baseCellSize = 8; 
+            // РУХОЙ МАСШТАБ ЯЧЕЕК: размер привязан к зуму, чтобы при приближении они смыкались в сплошное поле!
+            // Базовый размер ячейки равен пропорции мира игры (например, каждая система/квадрат имеет размер около 4000 единиц)
+            let worldCellSize = 6000; 
 
             coordMap.forEach((cell) => {
                 let c = getC(cell.x, cell.y);
                 if (c.cx < 0 || c.cx > cw || c.cy < 0 || c.cy > cw) return;
 
-                let size = baseCellSize / scale;
+                // Переводим игровые единицы в пиксели холста с учетом текущего scale
+                let size = (worldCellSize / 640000) * cw; 
                 let half = size / 2;
                 let count = cell.items.length;
 
@@ -549,8 +572,9 @@
                     ctx.fillStyle = item.color;
                     ctx.fillRect(c.cx - half, c.cy - half, size, size);
 
+                    // Видимые границы ячеек мозаики
                     ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1 / scale;
+                    ctx.lineWidth = 1.5 / scale;
                     ctx.strokeRect(c.cx - half, c.cy - half, size, size);
 
                     if (item.isMoving) {
@@ -572,7 +596,7 @@
                     });
 
                     ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1.5 / scale;
+                    ctx.lineWidth = 2 / scale;
                     ctx.strokeRect(c.cx - half, c.cy - half, size, size);
                 }
             });
