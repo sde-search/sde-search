@@ -261,7 +261,6 @@
     <script>
         // --- ЛОГИКА АВТОРИЗАЦИИ НА ФРОНТЕНДЕ ---
         window.onload = () => {
-            // Проверяем, вводили ли пароль в этой сессии
             if (sessionStorage.getItem('isAuthorized') === 'true') {
                 unlockInterface();
             }
@@ -270,10 +269,8 @@
         function checkAuth() {
             const pass = document.getElementById('passInput').value;
             
-            // ==============================================================
-            // ТВОЙ ПАРОЛЬ ДЛЯ ВХОДА УКАЗАН ЗДЕСЬ. МОЖЕШЬ ПОМЕНЯТЬ ЕГО:
+            // ТВОЙ ПАРОЛЬ ДЛЯ ВХОДА УКАЗАН ЗДЕСЬ:
             if (pass === '123456') { 
-            // ==============================================================
                 sessionStorage.setItem('isAuthorized', 'true');
                 unlockInterface();
             } else {
@@ -285,11 +282,9 @@
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainWrapper').style.display = 'flex';
             
-            // Запускаем основной функционал страницы только после авторизации
             checkServerStatus();
             drawMap(); 
         }
-
 
         // --- ОСНОВНОЙ ФУНКЦИОНАЛ СТРАНИЦЫ ---
         const API_BASE_URL = 'https://sde.domedome.crazedns.ru'; 
