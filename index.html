@@ -185,12 +185,36 @@
             text-align: center; width: 100%; max-width: 320px; box-sizing: border-box;
         }
         #mainWrapper {
-            display: none; /* Скрыт до авторизации */
+            display: none; 
             flex-direction: column; 
             align-items: center; 
             width: 100%;
         }
     </style>
+    
+    <script>
+        // ПЕРЕХВАТЧИК FETCH: автоматически добавляет токен Basic Auth ко всем запросам
+        const originalFetch = window.fetch;
+        window.fetch = async function() {
+            let [resource, config] = arguments;
+            if (!config) config = {};
+            if (!config.headers) config.headers = {};
+            
+            const token = sessionStorage.getItem('authToken');
+            if (token) {
+                config.headers['Authorization'] = 'Basic ' + token;
+            }
+            
+            let response = await originalFetch(resource, config);
+            
+            if (response.status === 401) {
+                document.getElementById('loginOverlay').style.display = 'flex';
+                document.getElementById('mainWrapper').style.display = 'none';
+                sessionStorage.removeItem('authToken');
+            }
+            return response;
+        };
+    </script>
 </head>
 <body>
 
@@ -198,10 +222,11 @@
     <div id="loginOverlay">
         <div class="login-card">
             <h2 style="color: var(--accent); margin-top: 0;">🔒 Доступ закрыт</h2>
-            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Введите пароль для доступа к OSINT Радару</p>
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Введите данные для доступа к OSINT Радару</p>
+            <input type="text" id="userInput" placeholder="Логин" style="width: 100%; margin-bottom: 10px;">
             <input type="password" id="passInput" placeholder="Пароль" style="width: 100%; margin-bottom: 15px;" onkeypress="if(event.key === 'Enter') checkAuth()">
             <button onclick="checkAuth()" style="width: 100%;">Войти</button>
-            <div id="loginError" style="color: var(--red); font-size: 13px; margin-top: 15px; display: none;">❌ Неверный пароль!</div>
+            <div id="loginError" style="color: var(--red); font-size: 13px; margin-top: 15px; display: none;">❌ Неверный логин или пароль!</div>
         </div>
     </div>
 
@@ -256,25 +281,44 @@
                 <div class="map-legend" id="mapLegend"></div>
             </div>
         </div>
+        
+        <div class="card">
+            <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">📦 Экспорт данных</h3>
+            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+                <a href="#" onclick="downloadFile('/api/download/history', 'bot_history.txt'); return false;" class="btn" style="background: #1f2d44; color: var(--accent); border: 1px solid var(--border); font-size: 13px;">📄 Лог событий (txt)</a>
+                <a href="#" onclick="downloadFile('/api/download/db', 'analytics.db'); return false;" class="btn" style="background: #1f2d44; color: #b388ff; border: 1px solid var(--border); font-size: 13px;">🗄️ База событий (SQLite)</a>
+                <a href="#" onclick="downloadFile('/api/download/intel', 'galaxy_intel.db'); return false;" class="btn" style="background: #1f2d44; color: #ffcc00; border: 1px solid var(--border); font-size: 13px;">🌍 База радара Галактики</a>
+                <a href="#" onclick="downloadFile('/api/download/errors', 'error_log.txt'); return false;" class="btn" style="background: #1f2d44; color: #ff5252; border: 1px solid var(--border); font-size: 13px;">⚠️ Лог ошибок (txt)</a>
+            </div>
+        </div>
     </div>
 
     <script>
+        const API_BASE_URL = 'https://sde.domedome.crazedns.ru'; 
+
         // --- ЛОГИКА АВТОРИЗАЦИИ НА ФРОНТЕНДЕ ---
         window.onload = () => {
-            if (sessionStorage.getItem('isAuthorized') === 'true') {
+            if (sessionStorage.getItem('authToken')) {
                 unlockInterface();
+            } else {
+                document.getElementById('loginOverlay').style.display = 'flex';
             }
         };
 
-        function checkAuth() {
-            const pass = document.getElementById('passInput').value;
+        async function checkAuth() {
+            const user = document.getElementById('userInput').value.trim();
+            const pass = document.getElementById('passInput').value.trim();
+            const token = btoa(user + ':' + pass);
             
-            // ТВОЙ ПАРОЛЬ ДЛЯ ВХОДА УКАЗАН ЗДЕСЬ:
-            if (pass === '123456') { 
-                sessionStorage.setItem('isAuthorized', 'true');
+            sessionStorage.setItem('authToken', token);
+            
+            const res = await fetch(`${API_BASE_URL}/api/status`);
+            if (res.ok) {
+                document.getElementById('loginError').style.display = 'none';
                 unlockInterface();
             } else {
                 document.getElementById('loginError').style.display = 'block';
+                sessionStorage.removeItem('authToken');
             }
         }
 
@@ -286,15 +330,30 @@
             drawMap(); 
         }
 
-        // --- ОСНОВНОЙ ФУНКЦИОНАЛ СТРАНИЦЫ ---
-        const API_BASE_URL = 'https://sde.domedome.crazedns.ru'; 
+        // --- ФУНКЦИЯ БЕЗОПАСНОГО СКАЧИВАНИЯ ФАЙЛОВ ---
+        async function downloadFile(endpoint, filename) {
+            try {
+                const res = await fetch(`${API_BASE_URL}${endpoint}`);
+                if (!res.ok) throw new Error();
+                const blob = await res.blob();
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch(e) { 
+                alert("Ошибка скачивания файла. Проверьте авторизацию."); 
+            }
+        }
 
+        // --- ОСНОВНОЙ ФУНКЦИОНАЛ СТРАНИЦЫ ---
         async function checkServerStatus() {
             const panel = document.querySelector('#serverStatusPanel .status-info');
             panel.innerHTML = '<span style="color: var(--muted);">Обновление данных...</span>';
             try {
                 const res = await fetch(`${API_BASE_URL}/api/status`);
-                if (!res.ok) throw new Error();
+                if (!res.ok) return;
                 const data = await res.json();
                 
                 let radarStatus = data.isScannerRunning ? `<strong style="color: var(--accent);">🔄 Сканирование (${data.scannerProgress} / ${data.scannerTotal})</strong>` :
@@ -330,7 +389,7 @@
 
             try {
                 const res = await fetch(`${API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
-                if (!res.ok) throw new Error();
+                if (!res.ok) return;
                 const data = await res.json();
 
                 if (data.length === 0) { resDiv.innerHTML = '<span style="color:var(--muted);">В заданном радиусе никого не найдено.</span>'; return; }
@@ -412,34 +471,36 @@
         const ctx = canvas.getContext('2d');
         const mapTooltip = document.getElementById('mapTooltip');
 
-        const WORLD_W = 640000;
-        const WORLD_H = 640000;
+        // ИДЕАЛЬНАЯ МАТЕМАТИКА: 1 координата = 1 клетка
+        let camX = 0;
+        let camY = 0; 
+        let zoom = 0.00125; 
+
+        let isDragging = false;
+        let lastMouse = { x: 0, y: 0 };
         let globalCoordMap = new Map(); 
 
-        let scale = 1;
-        let offsetX = 0;
-        let offsetY = 0;
-        let isDragging = false;
-        let startDragMouse = { x: 0, y: 0 };
-        let startDragOffset = { x: 0, y: 0 };
-
-        const getFinalScreenCoords = (x, y) => {
-            const cx = ((x + 320000) / WORLD_W) * canvas.width;
-            const cy = ((480000 - y) / WORLD_H) * canvas.height;
+        const worldToScreen = (wx, wy) => {
             return {
-                x: cx * scale + offsetX,
-                y: cy * scale + offsetY
+                x: (wx - camX) * zoom + canvas.width / 2,
+                y: (camY - wy) * zoom + canvas.height / 2
+            };
+        };
+
+        const screenToWorld = (sx, sy) => {
+            return {
+                x: (sx - canvas.width / 2) / zoom + camX,
+                y: camY - (sy - canvas.height / 2) / zoom
             };
         };
 
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
             const rect = canvas.getBoundingClientRect();
-            startDragMouse = { 
+            lastMouse = { 
                 x: (e.clientX - rect.left) * (canvas.width / rect.width), 
                 y: (e.clientY - rect.top) * (canvas.height / rect.height) 
             };
-            startDragOffset = { x: offsetX, y: offsetY };
             canvas.style.cursor = 'grabbing';
         });
 
@@ -449,24 +510,28 @@
             const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
             if (isDragging) {
-                offsetX = startDragOffset.x + (mouseX - startDragMouse.x);
-                offsetY = startDragOffset.y + (mouseY - startDragMouse.y);
+                const dx = mouseX - lastMouse.x;
+                const dy = mouseY - lastMouse.y;
+                
+                camX -= dx / zoom;
+                camY += dy / zoom; 
+                
+                lastMouse = { x: mouseX, y: mouseY };
                 drawMap();
                 mapTooltip.style.display = 'none';
                 return;
             }
 
             let hoveredCell = null;
+            let minDist = Infinity;
+            let hitRadius = Math.max(5, zoom / 2); 
 
             globalCoordMap.forEach((cell) => {
-                let sc = getFinalScreenCoords(cell.x, cell.y);
-                let worldSize = 1500; 
-                let sizePx = (worldSize / WORLD_W) * canvas.width * scale;
-                if (sizePx < 6) sizePx = 6; 
-                let half = sizePx / 2;
-
-                if (mouseX >= sc.x - half && mouseX <= sc.x + half &&
-                    mouseY >= sc.y - half && mouseY <= sc.y + half) {
+                let sc = worldToScreen(cell.x, cell.y);
+                let dist = Math.hypot(mouseX - sc.x, mouseY - sc.y);
+                
+                if (dist < hitRadius && dist < minDist) {
+                    minDist = dist;
                     hoveredCell = cell;
                 }
             });
@@ -503,15 +568,19 @@
             const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-            const zoomFactor = 1.15; 
-            let newScale = e.deltaY < 0 ? scale * zoomFactor : scale / zoomFactor;
-            
-            if (newScale < 0.2) newScale = 0.2;
-            if (newScale > 100000) newScale = 100000; 
+            const worldBefore = screenToWorld(mouseX, mouseY);
 
-            offsetX -= (mouseX - offsetX) * (newScale / scale - 1);
-            offsetY -= (mouseY - offsetY) * (newScale / scale - 1);
-            scale = newScale;
+            const zoomFactor = 1.15; 
+            if (e.deltaY < 0) { zoom *= zoomFactor; } 
+            else { zoom /= zoomFactor; }
+
+            if (zoom < 0.0001) zoom = 0.0001;  
+            if (zoom > 100) zoom = 100;      
+
+            const worldAfter = screenToWorld(mouseX, mouseY);
+
+            camX += (worldBefore.x - worldAfter.x);
+            camY += (worldBefore.y - worldAfter.y);
 
             mapTooltip.style.display = 'none'; 
             drawMap();
@@ -530,7 +599,7 @@
 
             try {
                 const res = await fetch(`${API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
-                if(!res.ok) throw new Error();
+                if(!res.ok) return;
                 const data = await res.json();
                 
                 if(data.length === 0) { alert(`Объекты игрока "${pName}" не найдены в базе данных.`); btn.innerText = originalText; return; }
@@ -573,16 +642,16 @@
 
         function drawMap() {
             if(!canvas) return;
-            
             const cw = canvas.width;  
             const ch = canvas.height; 
 
             ctx.clearRect(0, 0, cw, ch);
 
-            let topC = getFinalScreenCoords(0, 480000);
-            let botC = getFinalScreenCoords(0, -160000);
-            let leftC = getFinalScreenCoords(-320000, 160000);
-            let rightC = getFinalScreenCoords(320000, 160000);
+            // Границы галактики
+            let topC = worldToScreen(0, 480000);
+            let botC = worldToScreen(0, -160000);
+            let leftC = worldToScreen(-320000, 160000);
+            let rightC = worldToScreen(320000, 160000);
 
             ctx.strokeStyle = '#2a3b5c';
             ctx.lineWidth = 1;
@@ -600,55 +669,49 @@
             ctx.moveTo(leftC.x, leftC.y); ctx.lineTo(rightC.x, rightC.y); 
             ctx.stroke();
 
-            let worldSize = 1500; 
-            let sizePx = (worldSize / WORLD_W) * cw * scale; 
-
-            if (sizePx >= 15) {
-                ctx.strokeStyle = '#1e293b';
+            // Динамическая сетка
+            if (zoom > 0.05) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
 
-                let minWorldX = (0 - offsetX) / scale;
-                let maxWorldX = (cw - offsetX) / scale;
-                let minWorldY = (0 - offsetY) / scale;
-                let maxWorldY = (ch - offsetY) / scale;
+                let step = 10000;
+                if (zoom > 0.5) step = 1000;
+                if (zoom > 5) step = 100;
+                if (zoom > 15) step = 1; 
 
-                let gameMinX = (minWorldX / cw) * WORLD_W - 320000;
-                let gameMaxX = (maxWorldX / cw) * WORLD_W - 320000;
-                let gameMinY = 480000 - (maxWorldY / ch) * WORLD_H;
-                let gameMaxY = 480000 - (minWorldY / ch) * WORLD_H;
+                let tlWorld = screenToWorld(0, 0);
+                let brWorld = screenToWorld(cw, ch);
 
-                let startX = Math.floor((gameMinX + worldSize/2) / worldSize) * worldSize - worldSize/2;
-                let endX = Math.ceil((gameMaxX + worldSize/2) / worldSize) * worldSize + worldSize/2;
-                let startY = Math.floor((gameMinY + worldSize/2) / worldSize) * worldSize - worldSize/2;
-                let endY = Math.ceil((gameMaxY + worldSize/2) / worldSize) * worldSize + worldSize/2;
+                let startX = Math.floor(Math.min(tlWorld.x, brWorld.x) / step) * step;
+                let endX = Math.ceil(Math.max(tlWorld.x, brWorld.x) / step) * step;
+                let startY = Math.floor(Math.min(tlWorld.y, brWorld.y) / step) * step;
+                let endY = Math.ceil(Math.max(tlWorld.y, brWorld.y) / step) * step;
 
-                for (let x = startX; x <= endX; x += worldSize) {
-                    let p1 = getFinalScreenCoords(x, -160000);
-                    let p2 = getFinalScreenCoords(x, 480000);
-                    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+                for (let x = startX; x <= endX; x += step) {
+                    let p1 = worldToScreen(x, Math.min(tlWorld.y, brWorld.y));
+                    let p2 = worldToScreen(x, Math.max(tlWorld.y, brWorld.y));
+                    ctx.moveTo(Math.round(p1.x)-0.5, p1.y); ctx.lineTo(Math.round(p2.x)-0.5, p2.y);
                 }
-                for (let y = startY; y <= endY; y += worldSize) {
-                    let p1 = getFinalScreenCoords(-320000, y);
-                    let p2 = getFinalScreenCoords(320000, y);
-                    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+                for (let y = startY; y <= endY; y += step) {
+                    let p1 = worldToScreen(Math.min(tlWorld.x, brWorld.x), y);
+                    let p2 = worldToScreen(Math.max(tlWorld.x, brWorld.x), y);
+                    ctx.moveTo(p1.x, Math.round(p1.y)-0.5); ctx.lineTo(p2.x, Math.round(p2.y)-0.5);
                 }
                 ctx.stroke();
             }
 
-            let sun = getFinalScreenCoords(0, 0);
+            let sun = worldToScreen(0, 0);
             ctx.fillStyle = '#ffcc00';
             ctx.beginPath(); ctx.arc(sun.x, sun.y, 4, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = 'rgba(255, 204, 0, 0.2)';
-            ctx.beginPath(); ctx.arc(sun.x, sun.y, 8, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#8fa3c7'; ctx.font = `11px Arial`; 
-            ctx.fillText('Sun (0:0)', sun.x + 10, sun.y + 4);
+            ctx.fillText('☀️ Sun (0:0)', sun.x + 10, sun.y + 4);
 
-            let bh = getFinalScreenCoords(0, 160000);
+            let bh = worldToScreen(0, 160000);
             ctx.fillStyle = '#b388ff';
             ctx.beginPath(); ctx.arc(bh.x, bh.y, 4, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#8fa3c7'; 
-            ctx.fillText('Blackhole', bh.x + 10, bh.y + 4);
+            ctx.fillText('🕳️ Blackhole', bh.x + 10, bh.y + 4);
 
             globalCoordMap.clear(); 
             activeMapPlayers.forEach(p => {
@@ -661,7 +724,7 @@
                     let cell = globalCoordMap.get(key);
                     let existing = cell.items.find(i => i.player === p.name);
                     if (!existing) {
-                        cell.items.push({ player: p.name, color: p.color, isMoving: t.IsMoving, rawX: t.X, rawY: t.Y, sys: t.SystemName });
+                        cell.items.push({ player: p.name, color: p.color, isMoving: t.IsMoving });
                     } else if (t.IsMoving) {
                         existing.isMoving = true;
                     }
@@ -669,52 +732,71 @@
             });
 
             globalCoordMap.forEach((cell) => {
-                let sc = getFinalScreenCoords(cell.x, cell.y);
-                let currentSizePx = sizePx; 
-
-                if (currentSizePx < 6) currentSizePx = 6;
+                let sc = worldToScreen(cell.x, cell.y);
                 
-                let half = currentSizePx / 2;
+                let sizePx = zoom;
+                let isSmall = false;
 
-                if (sc.x < -currentSizePx || sc.x > cw + currentSizePx || sc.y < -currentSizePx || sc.y > ch + currentSizePx) return;
+                if (sizePx < 6) {
+                    sizePx = 6;
+                    isSmall = true;
+                }
+
+                let half = sizePx / 2;
+                let tlX = sc.x - half;
+                let tlY = sc.y - half;
+
+                if (tlX > cw || tlX + sizePx < 0 || tlY > ch || tlY + sizePx < 0) return;
+
+                tlX = Math.round(tlX);
+                tlY = Math.round(tlY);
+                let w = Math.ceil(sizePx);
+                let h = Math.ceil(sizePx);
 
                 let count = cell.items.length;
 
                 if (count === 1) {
-                    let item = cell.items[0];
-                    ctx.fillStyle = item.color;
-                    ctx.fillRect(sc.x - half, sc.y - half, currentSizePx, currentSizePx);
+                    ctx.fillStyle = cell.items[0].color;
+                    ctx.fillRect(tlX, tlY, w, h);
 
-                    if (item.isMoving && currentSizePx > 8) {
+                    ctx.strokeStyle = '#0b0f19';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(tlX, tlY, w, h);
+
+                    if (cell.items[0].isMoving && !isSmall) {
                         ctx.fillStyle = '#0b0f19';
-                        ctx.fillRect(sc.x - half/2, sc.y - half/2, currentSizePx/2, currentSizePx/2);
+                        ctx.fillRect(tlX + w*0.25, tlY + h*0.25, w*0.5, h*0.5);
                     }
                 } else if (count === 2) {
+                    let halfW = Math.round(w / 2);
                     ctx.fillStyle = cell.items[0].color;
-                    ctx.fillRect(sc.x - half, sc.y - half, half, currentSizePx);
+                    ctx.fillRect(tlX, tlY, halfW, h);
                     
                     ctx.fillStyle = cell.items[1].color;
-                    ctx.fillRect(sc.x, sc.y - half, half, currentSizePx);
+                    ctx.fillRect(tlX + halfW, tlY, w - halfW, h);
                     
-                    ctx.beginPath(); ctx.moveTo(sc.x, sc.y - half); ctx.lineTo(sc.x, sc.y + half); ctx.stroke();
+                    ctx.strokeStyle = '#0b0f19';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(tlX, tlY, w, h);
+                    ctx.beginPath(); ctx.moveTo(tlX + halfW, tlY); ctx.lineTo(tlX + halfW, tlY + h); ctx.stroke();
                 } else {
+                    let halfW = Math.round(w / 2);
+                    let halfH = Math.round(h / 2);
                     let subSizes = [
-                        { dx: -half, dy: -half, w: half, h: half }, 
-                        { dx: 0,     dy: -half, w: half, h: half }, 
-                        { dx: -half, dy: 0,     w: half, h: half }, 
-                        { dx: 0,     dy: 0,     w: half, h: half }  
+                        { dx: 0,     dy: 0,     sw: halfW,     sh: halfH }, 
+                        { dx: halfW, dy: 0,     sw: w - halfW, sh: halfH }, 
+                        { dx: 0,     dy: halfH, sw: halfW,     sh: h - halfH }, 
+                        { dx: halfW, dy: halfH, sw: w - halfW, sh: h - halfH }  
                     ];
                     cell.items.forEach((item, idx) => {
                         let sub = subSizes[idx % 4]; 
                         ctx.fillStyle = item.color;
-                        ctx.fillRect(sc.x + sub.dx, sc.y + sub.dy, sub.w, sub.h);
+                        ctx.fillRect(tlX + sub.dx, tlY + sub.dy, sub.sw, sub.sh);
                     });
-                }
-
-                if (currentSizePx >= 4) {
+                    
                     ctx.strokeStyle = '#0b0f19';
                     ctx.lineWidth = 1;
-                    ctx.strokeRect(sc.x - half, sc.y - half, currentSizePx, currentSizePx);
+                    ctx.strokeRect(tlX, tlY, w, h);
                 }
             });
         }
