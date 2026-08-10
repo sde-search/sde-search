@@ -207,7 +207,7 @@
         <h3 style="color: #b388ff; margin-top: 0; font-size: 20px;">🗺️ Тактическая Карта Галактики</h3>
         <p style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px;">
             • Масштабируйте карту <b>колесиком мыши</b>, перемещайтесь <b>зажав кнопку</b>.<br>
-            • Ячейки сетки закрашиваются в цвета игроков. При наведении видна информация.
+            • Можно наложить до 5 игроков. <b style="color: #fff;">Квадрат</b> — флот в движении, <b style="color: #fff;">Круг</b> — статичная база.
         </p>
 
         <div class="controls" style="margin-bottom: 25px;">
@@ -295,7 +295,7 @@
             } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; }
         }
 
-        // --- ИНТЕРАКТИВНАЯ СЕТОЧНАЯ КАРТА ---
+        // --- ЛОГИКА ИНТЕРАКТИВНОЙ КАРТЫ ---
         const mapColors = ['#00ffcc', '#ff5252', '#ff9800', '#b388ff', '#ffcc00'];
         let activeMapPlayers = [];
         
@@ -303,7 +303,11 @@
         const ctx = canvas.getContext('2d');
         const mapTooltip = document.getElementById('mapTooltip');
 
-        // Настройки камеры
+        const getC = (x, y) => ({ 
+            cx: ((x + 320000) / 640000) * 800, 
+            cy: ((480000 - y) / 640000) * 800 
+        });
+
         let scale = 1;
         let offsetX = 0;
         let offsetY = 0;
@@ -311,57 +315,65 @@
         let startDragMouse = { x: 0, y: 0 };
         let startDragOffset = { x: 0, y: 0 };
 
-        // Перевод игровых координат в пиксели холста (800x800)
-        // Галактика по X: от -320000 до 320000 (ширина 640000)
-        // Галактика по Y: от -160000 до 480000 (высота 640000)
-        const getScreenCoords = (x, y) => ({
-            x: ((x + 320000) / 640000) * 800,
-            y: ((480000 - y) / 640000) * 800
-        });
-
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
-            startDragMouse = { x: e.clientX, y: e.clientY };
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            startDragMouse = { x: e.clientX * scaleX, y: e.clientY * scaleY };
             startDragOffset = { x: offsetX, y: offsetY };
         });
 
         canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
             if (isDragging) {
-                offsetX = startDragOffset.x + (e.clientX - startDragMouse.x);
-                offsetY = startDragOffset.y + (e.clientY - startDragMouse.y);
+                const dx = (e.clientX * scaleX) - startDragMouse.x;
+                const dy = (e.clientY * scaleY) - startDragMouse.y;
+                offsetX = startDragOffset.x + dx;
+                offsetY = startDragOffset.y + dy;
                 drawMap();
                 mapTooltip.style.display = 'none';
                 return;
             }
 
-            // Проверка наведения мыши (Hover / Tooltip)
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
-            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            // Hit Detection (Наведение курсора)
+            let hoveredItems = [];
+            let hoverCoords = null;
+            let minHitDist = 8; 
 
-            // Переводим экранные координаты мыши в мировые игровые координаты
-            const worldMouseX = (mouseX - offsetX) / scale;
-            const worldMouseY = (mouseY - offsetY) / scale;
-
-            let hoveredCell = null;
             activeMapPlayers.forEach(p => {
                 p.tracks.forEach(t => {
-                    let sc = getScreenCoords(t.X, t.Y);
-                    // Проверяем попадание в радиус ячейки
-                    if (Math.hypot(worldMouseX - sc.x, worldMouseY - sc.y) < 15) {
-                        hoveredCell = { x: t.X, y: t.Y, sys: t.SystemName, player: p.name, isMoving: t.IsMoving };
+                    const baseC = getC(t.X, t.Y);
+                    const screenX = baseC.cx * scale + offsetX;
+                    const screenY = baseC.cy * scale + offsetY;
+                    
+                    const dist = Math.hypot(mouseX - screenX, mouseY - screenY);
+                    
+                    if (dist < minHitDist) {
+                        if (!hoverCoords) hoverCoords = { x: t.X, y: t.Y, sys: t.SystemName, isMoving: t.IsMoving };
+                        if (t.X === hoverCoords.x && t.Y === hoverCoords.y) {
+                            hoveredItems.push(p.name);
+                        }
                     }
                 });
             });
 
-            if (hoveredCell) {
-                let statusText = hoveredCell.isMoving ? '<span style="color:var(--orange);">⚠️ В движении (Флот)</span>' : '<span style="color:#fff;">Статично (База)</span>';
-                let sysInfo = hoveredCell.sys ? ` (${hoveredCell.sys})` : '';
+            if (hoverCoords) {
+                let playersAtCoord = [...new Set(hoveredItems)].join(', ');
+                let systemName = hoverCoords.sys ? ` <span style="color:#8fa3c7; font-weight:normal;">(${hoverCoords.sys})</span>` : '';
+                let statusText = hoverCoords.isMoving ? '<span style="color:var(--orange);">⚠️ В движении (Флот)</span>' : '<span style="color:#fff;">Статично (База)</span>';
+
                 mapTooltip.innerHTML = `
-                    <div style="color: var(--accent); font-weight: bold; margin-bottom: 5px;">📍 ${hoveredCell.x} : ${hoveredCell.y}${sysInfo}</div>
-                    <div>Игрок: <b style="color: #fff;">${hoveredCell.player}</b></div>
-                    <div style="font-size: 12px; color: #8fa3c7; margin-top: 3px;">Статус: ${statusText}</div>
+                    <div style="color: var(--accent); font-weight: bold; margin-bottom: 8px; font-size: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">📍 ${hoverCoords.x} : ${hoverCoords.y}${systemName}</div>
+                    <div style="margin-bottom: 5px;">Игрок: <b style="color: #fff;">${playersAtCoord}</b></div>
+                    <div style="font-size: 13px; color: #8fa3c7;">Статус: ${statusText}</div>
                 `;
+                
                 mapTooltip.style.left = (e.clientX - rect.left + 15) + 'px';
                 mapTooltip.style.top = (e.clientY - rect.top + 15) + 'px';
                 mapTooltip.style.display = 'block';
@@ -375,26 +387,32 @@
         canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
         canvas.addEventListener('mouseleave', () => { isDragging = false; mapTooltip.style.display = 'none'; canvas.style.cursor = 'default'; });
 
-        // Плавный зум в центр холста
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const zoomFactor = 1.15;
-            let newScale = e.deltaY < 0 ? scale * zoomFactor : scale / zoomFactor;
+            const zoomSensitivity = 0.2; 
+            const delta = e.deltaY < 0 ? 1 + zoomSensitivity : 1 - zoomSensitivity;
             
-            if (newScale < 0.2) newScale = 0.2;
-            if (newScale > 100) newScale = 100;
-
             const rect = canvas.getBoundingClientRect();
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
 
-            offsetX = centerX - (centerX - offsetX) * (newScale / scale);
-            offsetY = centerY - (centerY - offsetY) * (newScale / scale);
+            const worldX = (mouseX - offsetX) / scale;
+            const worldY = (mouseY - offsetY) / scale;
+
+            let newScale = scale * delta;
+            if (newScale < 0.5) newScale = 0.5;
+            if (newScale > 50000) newScale = 50000; 
             scale = newScale;
 
-            mapTooltip.style.display = 'none';
+            offsetX = mouseX - worldX * scale;
+            offsetY = mouseY - worldY * scale;
+
+            mapTooltip.style.display = 'none'; 
             drawMap();
         }, { passive: false });
+
 
         async function addPlayerToMap() {
             const input = document.getElementById('mapPlayerInput');
@@ -453,8 +471,9 @@
         function drawMap() {
             if(!canvas) return;
             
-            const cw = canvas.width;  // 800
-            const ch = canvas.height; // 800
+            const cw = canvas.width;  
+            const ch = canvas.height; 
+            const hw = cw / 2;        
 
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -465,49 +484,45 @@
             ctx.translate(offsetX, offsetY);
             ctx.scale(scale, scale);
 
-            // 1. Рисуем ВИДИМУЮ координатную сетку галактики
-            ctx.strokeStyle = '#1e293b';
             ctx.lineWidth = 1 / scale;
-            ctx.fillStyle = '#475569';
-            ctx.font = `${10 / scale}px Arial`;
 
-            let step = 40000; // Шаг сетки по координатам
-            for (let x = -320000; x <= 320000; x += step) {
-                let p1 = getScreenCoords(x, -160000);
-                let p2 = getScreenCoords(x, 480000);
-                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-                if (x !== 0) ctx.fillText(`X:${x}`, p1.x + 3, p1.y - 5);
-            }
-            for (let y = -160000; y <= 480000; y += step) {
-                let p1 = getScreenCoords(-320000, y);
-                let p2 = getScreenCoords(320000, y);
-                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-                if (y !== 0) ctx.fillText(`Y:${y}`, p1.x + 3, p1.y - 5);
-            }
+            ctx.strokeStyle = '#2a3b5c';
+            ctx.beginPath();
+            ctx.moveTo(hw, 0);   
+            ctx.lineTo(cw, hw); 
+            ctx.lineTo(hw, cw); 
+            ctx.lineTo(0, hw);   
+            ctx.closePath();
+            ctx.stroke();
 
-            // Главные оси X=0 и Y=0 (Солнце)
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 2 / scale;
-            let axisY1 = getScreenCoords(0, -160000), axisY2 = getScreenCoords(0, 480000);
-            ctx.beginPath(); ctx.moveTo(axisY1.x, axisY1.y); ctx.lineTo(axisY2.x, axisY2.y); ctx.stroke();
+            ctx.strokeStyle = '#131a2b';
+            ctx.beginPath();
+            ctx.moveTo(hw, 0); ctx.lineTo(hw, cw); 
+            ctx.moveTo(0, hw); ctx.lineTo(cw, hw); 
+            ctx.stroke();
 
-            let axisX1 = getScreenCoords(-320000, 0), axisX2 = getScreenCoords(320000, 0);
-            ctx.beginPath(); ctx.moveTo(axisX1.x, axisX1.y); ctx.lineTo(axisX2.x, axisX2.y); ctx.stroke();
-
-            // Опознавательные точки: Солнце и Черная дыра
-            let sun = getScreenCoords(0, 0);
+            // Ориентир 1: Солнце
+            let sun = getC(0, 0);
             ctx.fillStyle = '#ffcc00';
-            ctx.beginPath(); ctx.arc(sun.x, sun.y, 8 / scale, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#ffcc00'; ctx.font = `bold ${12 / scale}px Arial`;
-            ctx.fillText('☀️ Sun (0:0)', sun.x + 12, sun.y + 4);
+            ctx.beginPath(); ctx.arc(sun.cx, sun.cy, 6 / scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(255, 204, 0, 0.2)';
+            ctx.beginPath(); ctx.arc(sun.cx, sun.cy, 12 / scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8fa3c7'; 
+            ctx.font = `${11 / scale}px Arial`; 
+            ctx.fillText('Sun (0:0)', sun.cx + (10/scale), sun.cy + (4/scale));
 
-            let bh = getScreenCoords(0, 160000);
+            // Ориентир 2: Черная дыра
+            let bh = getC(0, 160000);
             ctx.fillStyle = '#b388ff';
-            ctx.beginPath(); ctx.arc(bh.x, bh.y, 7 / scale, 0, Math.PI*2); ctx.fill();
-            ctx.fillText('🕳️ Blackhole (0:160k)', bh.x + 12, bh.y + 4);
+            ctx.beginPath(); ctx.arc(bh.cx, bh.cy, 5 / scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(179, 136, 255, 0.2)';
+            ctx.beginPath(); ctx.arc(bh.cx, bh.cy, 10 / scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8fa3c7'; 
+            ctx.fillText('Blackhole', bh.cx + (10/scale), bh.cy + (4/scale));
 
-            // 2. Собираем данные игроков в общую карту ячеек
-            let coordMap = new Map();
+            // Собираем точки в мозаику
+            let coordMap = new Map(); 
+
             activeMapPlayers.forEach(p => {
                 p.tracks.forEach(t => {
                     let key = `${t.X}:${t.Y}`;
@@ -518,46 +533,47 @@
                 });
             });
 
-            // 3. Рендерим закрашенные ячейки (Мозаику)
-            // Размер ячейки в пикселях холста (фиксированный размер плитки, который идеально прилегает к другим)
-            let tileSize = 20; 
+            // Отрисовка мозаики (квадраты со стабильным размером при зуме)
+            let baseCellSize = 8; 
 
             coordMap.forEach((cell) => {
-                let sc = getScreenCoords(cell.x, cell.y);
-                let half = tileSize / 2;
+                let c = getC(cell.x, cell.y);
+                if (c.cx < 0 || c.cx > cw || c.cy < 0 || c.cy > cw) return;
+
+                let size = baseCellSize / scale;
+                let half = size / 2;
                 let count = cell.items.length;
 
                 if (count === 1) {
                     let item = cell.items[0];
                     ctx.fillStyle = item.color;
-                    ctx.fillRect(sc.x - half, sc.y - half, tileSize, tileSize);
+                    ctx.fillRect(c.cx - half, c.cy - half, size, size);
 
-                    // Четкие границы ячейки
                     ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1.5 / scale;
-                    ctx.strokeRect(sc.x - half, sc.y - half, tileSize, tileSize);
+                    ctx.lineWidth = 1 / scale;
+                    ctx.strokeRect(c.cx - half, c.cy - half, size, size);
 
-                    // Если флот в движении — рисуем метку внутри
                     if (item.isMoving) {
                         ctx.fillStyle = '#0b0f19';
-                        ctx.fillRect(sc.x - half/2, sc.y - half/2, tileSize/2, tileSize/2);
+                        ctx.fillRect(c.cx - half/2, c.cy - half/2, size/2, size/2);
                     }
                 } else {
-                    // Если несколько игроков в одной системе — делим ячейку на половины
                     let subSizes = [
-                        { x: sc.x - half, y: sc.y - half, w: half, h: tileSize }, // Левая половина
-                        { x: sc.x,        y: sc.y - half, w: half, h: tileSize }  // Правая половина
+                        { x: c.cx - half, y: c.cy - half, w: half, h: half }, 
+                        { x: c.cx,        y: c.cy - half, w: half, h: half }, 
+                        { x: c.cx - half, y: c.cy,        w: half, h: half }, 
+                        { x: c.cx,        y: c.cy,        w: half, h: half }  
                     ];
 
                     cell.items.forEach((item, idx) => {
-                        let sub = subSizes[idx % 2];
+                        let sub = subSizes[idx % 4]; 
                         ctx.fillStyle = item.color;
                         ctx.fillRect(sub.x, sub.y, sub.w, sub.h);
                     });
 
                     ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 2 / scale;
-                    ctx.strokeRect(sc.x - half, sc.y - half, tileSize, tileSize);
+                    ctx.lineWidth = 1.5 / scale;
+                    ctx.strokeRect(c.cx - half, c.cy - half, size, size);
                 }
             });
 
