@@ -64,7 +64,7 @@
             flex-wrap: wrap; 
             margin-bottom: 15px; 
         }
-        input[type="number"], input[type="text"] { 
+        input[type="number"], input[type="text"], input[type="password"] { 
             padding: 9px; 
             background: #131a2b; 
             color: var(--text); 
@@ -74,7 +74,7 @@
             text-align: center;
         }
         input[type="number"] { width: 110px; }
-        input[type="text"] { flex: 1; min-width: 250px; max-width: 400px; }
+        input[type="text"], input[type="password"] { flex: 1; min-width: 250px; max-width: 400px; }
         
         button { 
             padding: 9px 20px; 
@@ -172,61 +172,126 @@
             margin-right: 8px; 
             vertical-align: middle;
         }
+
+        /* --- СТИЛИ АВТОРИЗАЦИИ --- */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 9999; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .login-card {
+            background: var(--card); border: 1px solid var(--accent); 
+            padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); 
+            text-align: center; width: 100%; max-width: 320px; box-sizing: border-box;
+        }
+        #mainWrapper {
+            display: none; /* Скрыт до авторизации */
+            flex-direction: column; 
+            align-items: center; 
+            width: 100%;
+        }
     </style>
 </head>
 <body>
 
-    <h1>🛰️ Внешний радар OSINT</h1>
-    
-    <div class="status-panel" id="serverStatusPanel">
-        <div class="status-info">
-            <span style="color: var(--muted);">Подключение к серверу...</span>
+    <!-- ОКНО АВТОРИЗАЦИИ -->
+    <div id="loginOverlay">
+        <div class="login-card">
+            <h2 style="color: var(--accent); margin-top: 0;">🔒 Доступ закрыт</h2>
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Введите пароль для доступа к OSINT Радару</p>
+            <input type="password" id="passInput" placeholder="Пароль" style="width: 100%; margin-bottom: 15px;" onkeypress="if(event.key === 'Enter') checkAuth()">
+            <button onclick="checkAuth()" style="width: 100%;">Войти</button>
+            <div id="loginError" style="color: var(--red); font-size: 13px; margin-top: 15px; display: none;">❌ Неверный пароль!</div>
         </div>
-        <button style="padding: 5px 10px; font-size: 12px; background: transparent; border: 1px solid var(--muted); color: var(--muted);" onclick="checkServerStatus()">🔄 Обновить статус</button>
-    </div>
-    
-    <div class="card">
-        <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">🎯 Глобальный поиск</h3>
-        <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Поиск баз в заданном радиусе (результаты группируются по игрокам).</p>
-        
-        <div class="controls">
-            <input type="number" id="targetX" placeholder="Ось X">
-            <span style="color: var(--muted); font-weight: bold;">:</span>
-            <input type="number" id="targetY" placeholder="Ось Y">
-            <input type="number" id="minDist" placeholder="Слепая зона" title="Не показывать объекты ближе этой дистанции">
-            <input type="number" id="maxDist" placeholder="Радиус (макс)" title="Искать не дальше этой дистанции (оставь пустым для всей галактики)">
-        </div>
-        <div class="controls">
-            <input type="text" id="ignorePlayers" placeholder="Игнорировать игроков (имена через запятую)">
-            <button onclick="searchTargets()">Сканировать сектор</button>
-        </div>
-        
-        <div style="margin-bottom: 15px; font-size: 14px; color: var(--accent); font-weight: bold;" id="statsLabel"></div>
-        <div id="targetResults" class="results"></div>
     </div>
 
-    <div class="card card-map">
-        <h3 style="color: #b388ff; margin-top: 0; font-size: 20px;">🗺️ Тактическая Карта Галактики</h3>
-        <p style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px;">
-            • 1 координата = 1 система. При зуме они вплотную прилегают друг к другу образуя мозаику.<br>
-            • Масштабируйте <b>колесиком мыши</b>, перемещайтесь <b>зажав левую кнопку</b>.
-        </p>
-
-        <div class="controls" style="margin-bottom: 25px;">
-            <input type="text" id="mapPlayerInput" placeholder="Введите точное имя игрока">
-            <button style="background: #b388ff;" onclick="addPlayerToMap()">+ Вывести на карту</button>
-        </div>
-
-        <div class="map-wrapper">
-            <div class="map-container">
-                <canvas id="galaxyMap" width="800" height="800"></canvas>
-                <div id="mapTooltip" class="map-tooltip"></div>
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div id="mainWrapper">
+        <h1>🛰️ Внешний радар OSINT</h1>
+        
+        <div class="status-panel" id="serverStatusPanel">
+            <div class="status-info">
+                <span style="color: var(--muted);">Подключение к серверу...</span>
             </div>
-            <div class="map-legend" id="mapLegend"></div>
+            <button style="padding: 5px 10px; font-size: 12px; background: transparent; border: 1px solid var(--muted); color: var(--muted);" onclick="checkServerStatus()">🔄 Обновить статус</button>
+        </div>
+        
+        <div class="card">
+            <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">🎯 Глобальный поиск</h3>
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Поиск баз в заданном радиусе (результаты группируются по игрокам).</p>
+            
+            <div class="controls">
+                <input type="number" id="targetX" placeholder="Ось X">
+                <span style="color: var(--muted); font-weight: bold;">:</span>
+                <input type="number" id="targetY" placeholder="Ось Y">
+                <input type="number" id="minDist" placeholder="Слепая зона" title="Не показывать объекты ближе этой дистанции">
+                <input type="number" id="maxDist" placeholder="Радиус (макс)" title="Искать не дальше этой дистанции (оставь пустым для всей галактики)">
+            </div>
+            <div class="controls">
+                <input type="text" id="ignorePlayers" placeholder="Игнорировать игроков (имена через запятую)">
+                <button onclick="searchTargets()">Сканировать сектор</button>
+            </div>
+            
+            <div style="margin-bottom: 15px; font-size: 14px; color: var(--accent); font-weight: bold;" id="statsLabel"></div>
+            <div id="targetResults" class="results"></div>
+        </div>
+
+        <div class="card card-map">
+            <h3 style="color: #b388ff; margin-top: 0; font-size: 20px;">🗺️ Тактическая Карта Галактики</h3>
+            <p style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px;">
+                • 1 координата = 1 система. При зуме они вплотную прилегают друг к другу образуя мозаику.<br>
+                • Масштабируйте <b>колесиком мыши</b>, перемещайтесь <b>зажав левую кнопку</b>.
+            </p>
+
+            <div class="controls" style="margin-bottom: 25px;">
+                <input type="text" id="mapPlayerInput" placeholder="Введите точное имя игрока">
+                <button style="background: #b388ff;" onclick="addPlayerToMap()">+ Вывести на карту</button>
+            </div>
+
+            <div class="map-wrapper">
+                <div class="map-container">
+                    <canvas id="galaxyMap" width="800" height="800"></canvas>
+                    <div id="mapTooltip" class="map-tooltip"></div>
+                </div>
+                <div class="map-legend" id="mapLegend"></div>
+            </div>
         </div>
     </div>
 
     <script>
+        // --- ЛОГИКА АВТОРИЗАЦИИ НА ФРОНТЕНДЕ ---
+        window.onload = () => {
+            // Проверяем, вводили ли пароль в этой сессии
+            if (sessionStorage.getItem('isAuthorized') === 'true') {
+                unlockInterface();
+            }
+        };
+
+        function checkAuth() {
+            const pass = document.getElementById('passInput').value;
+            
+            // ==============================================================
+            // ТВОЙ ПАРОЛЬ ДЛЯ ВХОДА УКАЗАН ЗДЕСЬ. МОЖЕШЬ ПОМЕНЯТЬ ЕГО:
+            if (pass === '123456') { 
+            // ==============================================================
+                sessionStorage.setItem('isAuthorized', 'true');
+                unlockInterface();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        function unlockInterface() {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainWrapper').style.display = 'flex';
+            
+            // Запускаем основной функционал страницы только после авторизации
+            checkServerStatus();
+            drawMap(); 
+        }
+
+
+        // --- ОСНОВНОЙ ФУНКЦИОНАЛ СТРАНИЦЫ ---
         const API_BASE_URL = 'https://sde.domedome.crazedns.ru'; 
 
         async function checkServerStatus() {
@@ -277,7 +342,6 @@
 
                 statsLabel.innerText = `Найдено объектов: ${data.length}`;
                 
-                // --- НОВАЯ ЛОГИКА ГРУППИРОВКИ ПО ИГРОКАМ ---
                 const playersGroup = {};
                 data.forEach(t => {
                     if (!playersGroup[t.PlayerName]) playersGroup[t.PlayerName] = [];
@@ -287,24 +351,20 @@
                 let html = '';
                 
                 for (const [playerName, systems] of Object.entries(playersGroup)) {
-                    // Сортируем системы игрока по удаленности (ближайшие сверху)
                     systems.sort((a, b) => a.Distance - b.Distance);
                     
                     const minDist = systems[0].Distance;
                     const sysCount = systems.length;
                     const movingCount = systems.filter(s => s.IsMoving).length;
 
-                    // Цвет карточки определяется по самой близкой системе
                     let bColor = 'var(--muted)';
                     if (minDist <= 200) bColor = 'var(--red)';
                     else if (minDist <= 500) bColor = 'var(--orange)';
                     else if (minDist <= 1000) bColor = 'var(--yellow)';
                     else if (minDist <= 2000) bColor = 'var(--accent)';
 
-                    // Генерируем уникальный ID для спойлера
                     const spoilerId = 'spoiler_' + Math.random().toString(36).substr(2, 9);
 
-                    // Главная карточка игрока (Сводка)
                     html += `
                     <div class="result-item" style="border-left-color: ${bColor}; cursor: pointer; transition: 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="const el = document.getElementById('${spoilerId}'); el.style.display = el.style.display === 'none' ? 'block' : 'none';">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
@@ -318,13 +378,11 @@
                         <div style="text-align: center; margin-top: 5px; font-size: 10px; color: #475569;">Кликни, чтобы развернуть ▼</div>
                     </div>
                     
-                    <!-- Скрытый блок с подробным списком координат -->
                     <div id="${spoilerId}" style="display: none; grid-column: 1 / -1; background: #0b0f19; border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 5px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
                         <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--accent); font-size: 14px;">Подробный список объектов (${playerName}):</h4>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
                     `;
 
-                    // Карточки отдельных систем внутри спойлера
                     systems.forEach(t => {
                         let sysColor = 'var(--muted)';
                         if (t.Distance <= 200) sysColor = 'var(--red)';
@@ -403,7 +461,6 @@
                 return;
             }
 
-            // Hit Detection (Наведение)
             let hoveredCell = null;
 
             globalCoordMap.forEach((cell) => {
@@ -548,11 +605,9 @@
             ctx.moveTo(leftC.x, leftC.y); ctx.lineTo(rightC.x, rightC.y); 
             ctx.stroke();
 
-            // Динамический размер. Система — это условно 1500 единиц игрового мира
             let worldSize = 1500; 
             let sizePx = (worldSize / WORLD_W) * cw * scale; 
 
-            // Сетка рисуется только если мы призумились (когда размер клетки > 15px)
             if (sizePx >= 15) {
                 ctx.strokeStyle = '#1e293b';
                 ctx.lineWidth = 1;
@@ -622,7 +677,6 @@
                 let sc = getFinalScreenCoords(cell.x, cell.y);
                 let currentSizePx = sizePx; 
 
-                // Если отдалено, делаем минимальный видимый размер
                 if (currentSizePx < 6) currentSizePx = 6;
                 
                 let half = currentSizePx / 2;
@@ -662,7 +716,6 @@
                     });
                 }
 
-                // Внешняя рамка системы
                 if (currentSizePx >= 4) {
                     ctx.strokeStyle = '#0b0f19';
                     ctx.lineWidth = 1;
@@ -670,11 +723,6 @@
                 }
             });
         }
-
-        window.onload = () => {
-            checkServerStatus();
-            drawMap(); 
-        };
     </script>
 </body>
 </html>
