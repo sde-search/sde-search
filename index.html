@@ -389,7 +389,7 @@
 
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
-            const zoomSensitivity = 0.2; // Ускорил зум
+            const zoomSensitivity = 0.2; 
             const delta = e.deltaY < 0 ? 1 + zoomSensitivity : 1 - zoomSensitivity;
             
             const rect = canvas.getBoundingClientRect();
@@ -403,7 +403,7 @@
 
             let newScale = scale * delta;
             if (newScale < 0.5) newScale = 0.5;
-            if (newScale > 50000) newScale = 50000; // Огромный лимит зума для мельчайших деталей!
+            if (newScale > 50000) newScale = 50000; 
             scale = newScale;
 
             offsetX = mouseX - worldX * scale;
@@ -520,25 +520,61 @@
             ctx.fillStyle = '#8fa3c7'; 
             ctx.fillText('Blackhole', bh.cx + (10/scale), bh.cy + (4/scale));
 
+            // Собираем точки в мозаику
+            let coordMap = new Map(); 
+
             activeMapPlayers.forEach(p => {
-                ctx.fillStyle = p.color;
                 p.tracks.forEach(t => {
-                    let c = getC(t.X, t.Y);
-                    
-                    if(c.cx < 0 || c.cx > cw || c.cy < 0 || c.cy > cw) return;
-
-                    // Больше не сжимаем размер до микроскопического. 
-                    // Радиус ВСЕГДА 3 пикселя на твоем мониторе, независимо от зума!
-                    let ptSize = 3 / scale; 
-
-                    if (t.IsMoving) {
-                        ctx.fillRect(c.cx - ptSize, c.cy - ptSize, ptSize*2, ptSize*2);
-                    } else {
-                        ctx.beginPath(); 
-                        ctx.arc(c.cx, c.cy, ptSize, 0, Math.PI*2); 
-                        ctx.fill();
+                    let key = `${t.X}:${t.Y}`;
+                    if (!coordMap.has(key)) {
+                        coordMap.set(key, { x: t.X, y: t.Y, items: [] });
                     }
+                    coordMap.get(key).items.push({ player: p.name, color: p.color, isMoving: t.IsMoving });
                 });
+            });
+
+            // Отрисовка мозаики (квадраты со стабильным размером при зуме)
+            let baseCellSize = 8; 
+
+            coordMap.forEach((cell) => {
+                let c = getC(cell.x, cell.y);
+                if (c.cx < 0 || c.cx > cw || c.cy < 0 || c.cy > cw) return;
+
+                let size = baseCellSize / scale;
+                let half = size / 2;
+                let count = cell.items.length;
+
+                if (count === 1) {
+                    let item = cell.items[0];
+                    ctx.fillStyle = item.color;
+                    ctx.fillRect(c.cx - half, c.cy - half, size, size);
+
+                    ctx.strokeStyle = '#0b0f19';
+                    ctx.lineWidth = 1 / scale;
+                    ctx.strokeRect(c.cx - half, c.cy - half, size, size);
+
+                    if (item.isMoving) {
+                        ctx.fillStyle = '#0b0f19';
+                        ctx.fillRect(c.cx - half/2, c.cy - half/2, size/2, size/2);
+                    }
+                } else {
+                    let subSizes = [
+                        { x: c.cx - half, y: c.cy - half, w: half, h: half }, 
+                        { x: c.cx,        y: c.cy - half, w: half, h: half }, 
+                        { x: c.cx - half, y: c.cy,        w: half, h: half }, 
+                        { x: c.cx,        y: c.cy,        w: half, h: half }  
+                    ];
+
+                    cell.items.forEach((item, idx) => {
+                        let sub = subSizes[idx % 4]; 
+                        ctx.fillStyle = item.color;
+                        ctx.fillRect(sub.x, sub.y, sub.w, sub.h);
+                    });
+
+                    ctx.strokeStyle = '#0b0f19';
+                    ctx.lineWidth = 1.5 / scale;
+                    ctx.strokeRect(c.cx - half, c.cy - half, size, size);
+                }
             });
 
             ctx.restore();
