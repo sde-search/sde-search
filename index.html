@@ -187,7 +187,7 @@
     
     <div class="card">
         <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">🎯 Глобальный поиск</h3>
-        <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Поиск баз в заданном радиусе (до 100 объектов).</p>
+        <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Поиск баз в заданном радиусе (результаты группируются по игрокам).</p>
         
         <div class="controls">
             <input type="number" id="targetX" placeholder="Ось X">
@@ -208,7 +208,7 @@
     <div class="card card-map">
         <h3 style="color: #b388ff; margin-top: 0; font-size: 20px;">🗺️ Тактическая Карта Галактики</h3>
         <p style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px;">
-            • 1 клетка = 1 система. При зуме они вплотную прилегают друг к другу образуя мозаику.<br>
+            • 1 координата = 1 система. При зуме они вплотную прилегают друг к другу образуя мозаику.<br>
             • Масштабируйте <b>колесиком мыши</b>, перемещайтесь <b>зажав левую кнопку</b>.
         </p>
 
@@ -276,24 +276,77 @@
                 if (data.length === 0) { resDiv.innerHTML = '<span style="color:var(--muted);">В заданном радиусе никого не найдено.</span>'; return; }
 
                 statsLabel.innerText = `Найдено объектов: ${data.length}`;
-                let html = '';
-                data.forEach((t) => {
-                    let bColor = 'var(--muted)';
-                    if (t.Distance <= 200) bColor = 'var(--red)';
-                    else if (t.Distance <= 500) bColor = 'var(--orange)';
-                    else if (t.Distance <= 1000) bColor = 'var(--yellow)';
-                    else if (t.Distance <= 2000) bColor = 'var(--accent)';
-
-                    let fStyle = t.IsMoving ? 'font-style: italic;' : '';
-                    html += `
-                    <div class="result-item" style="border-left-color: ${bColor}; ${fStyle}">
-                        <div style="color:${bColor}; font-weight:bold; margin-bottom:5px;">Дистанция: ${t.Distance}</div>
-                        <div style="font-size:15px; color:#fff; font-weight:bold;">${t.PlayerName}</div>
-                        <div style="font-size:13px; color:var(--muted);">Координаты: <span style="color:#fff;">${t.X}:${t.Y}</span></div>
-                        <div style="font-size:12px; color:var(--muted); margin-top: 4px;">Система: ${t.SystemName || 'Без названия'}</div>
-                        ${t.IsMoving ? '<div style="font-size: 11px; color: var(--orange); margin-top: 4px;">⚠️ В движении</div>' : ''}
-                    </div>`;
+                
+                // --- НОВАЯ ЛОГИКА ГРУППИРОВКИ ПО ИГРОКАМ ---
+                const playersGroup = {};
+                data.forEach(t => {
+                    if (!playersGroup[t.PlayerName]) playersGroup[t.PlayerName] = [];
+                    playersGroup[t.PlayerName].push(t);
                 });
+
+                let html = '';
+                
+                for (const [playerName, systems] of Object.entries(playersGroup)) {
+                    // Сортируем системы игрока по удаленности (ближайшие сверху)
+                    systems.sort((a, b) => a.Distance - b.Distance);
+                    
+                    const minDist = systems[0].Distance;
+                    const sysCount = systems.length;
+                    const movingCount = systems.filter(s => s.IsMoving).length;
+
+                    // Цвет карточки определяется по самой близкой системе
+                    let bColor = 'var(--muted)';
+                    if (minDist <= 200) bColor = 'var(--red)';
+                    else if (minDist <= 500) bColor = 'var(--orange)';
+                    else if (minDist <= 1000) bColor = 'var(--yellow)';
+                    else if (minDist <= 2000) bColor = 'var(--accent)';
+
+                    // Генерируем уникальный ID для спойлера
+                    const spoilerId = 'spoiler_' + Math.random().toString(36).substr(2, 9);
+
+                    // Главная карточка игрока (Сводка)
+                    html += `
+                    <div class="result-item" style="border-left-color: ${bColor}; cursor: pointer; transition: 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="const el = document.getElementById('${spoilerId}'); el.style.display = el.style.display === 'none' ? 'block' : 'none';">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                            <div style="font-size:16px; color:#fff; font-weight:bold;">${playerName}</div>
+                            <div style="color:${bColor}; font-weight:bold; font-size:12px; text-align: right;">от ${Math.round(minDist)} ед.</div>
+                        </div>
+                        <div style="font-size:13px; color:var(--muted);">
+                            Найдено систем: <span style="color:#fff; font-weight:bold;">${sysCount}</span>
+                        </div>
+                        ${movingCount > 0 ? `<div style="font-size: 11px; color: var(--orange); margin-top: 4px;">⚠️ В движении: ${movingCount}</div>` : '<div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Всё статично</div>'}
+                        <div style="text-align: center; margin-top: 5px; font-size: 10px; color: #475569;">Кликни, чтобы развернуть ▼</div>
+                    </div>
+                    
+                    <!-- Скрытый блок с подробным списком координат -->
+                    <div id="${spoilerId}" style="display: none; grid-column: 1 / -1; background: #0b0f19; border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 5px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+                        <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--accent); font-size: 14px;">Подробный список объектов (${playerName}):</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
+                    `;
+
+                    // Карточки отдельных систем внутри спойлера
+                    systems.forEach(t => {
+                        let sysColor = 'var(--muted)';
+                        if (t.Distance <= 200) sysColor = 'var(--red)';
+                        else if (t.Distance <= 500) sysColor = 'var(--orange)';
+                        else if (t.Distance <= 1000) sysColor = 'var(--yellow)';
+                        else if (t.Distance <= 2000) sysColor = 'var(--accent)';
+
+                        html += `
+                            <div style="background: #131a2b; padding: 10px; border-radius: 6px; border-left: 3px solid ${sysColor};">
+                                <div style="font-size:14px; color:#fff; font-weight:bold; margin-bottom: 3px;">📍 ${t.X}:${t.Y}</div>
+                                <div style="font-size:12px; color:var(--muted);">Дист: ${Math.round(t.Distance)} ед.</div>
+                                <div style="font-size:12px; color:var(--muted);">${t.SystemName || 'Без названия'}</div>
+                                ${t.IsMoving ? '<div style="font-size: 11px; color: var(--orange); margin-top: 4px;">⚠️ Флот в движении</div>' : '<div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Статичная база</div>'}
+                            </div>
+                        `;
+                    });
+
+                    html += `
+                        </div>
+                    </div>`;
+                }
+
                 resDiv.innerHTML = html;
             } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; }
         }
@@ -306,38 +359,34 @@
         const ctx = canvas.getContext('2d');
         const mapTooltip = document.getElementById('mapTooltip');
 
-        // Камера: Центр и Зум (Пикселей на 1 игровую единицу)
-        let camX = 0;
-        let camY = 160000;
-        let zoom = 0.00125; // При старте 800px вмещают 640000 ед. (800 / 640000)
-
-        let isDragging = false;
-        let lastMouse = { x: 0, y: 0 };
+        const WORLD_W = 640000;
+        const WORLD_H = 640000;
         let globalCoordMap = new Map(); 
 
-        // Перевод из игровых координат в экранные (с учетом камеры и зума)
-        const worldToScreen = (wx, wy) => {
-            return {
-                x: (wx - camX) * zoom + canvas.width / 2,
-                y: (camY - wy) * zoom + canvas.height / 2
-            };
-        };
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let startDragMouse = { x: 0, y: 0 };
+        let startDragOffset = { x: 0, y: 0 };
 
-        // Перевод из экранных координат обратно в игровые (для зума и мышки)
-        const screenToWorld = (sx, sy) => {
+        const getFinalScreenCoords = (x, y) => {
+            const cx = ((x + 320000) / WORLD_W) * canvas.width;
+            const cy = ((480000 - y) / WORLD_H) * canvas.height;
             return {
-                x: (sx - canvas.width / 2) / zoom + camX,
-                y: camY - (sy - canvas.height / 2) / zoom
+                x: cx * scale + offsetX,
+                y: cy * scale + offsetY
             };
         };
 
         canvas.addEventListener('mousedown', (e) => {
             isDragging = true;
             const rect = canvas.getBoundingClientRect();
-            lastMouse = { 
+            startDragMouse = { 
                 x: (e.clientX - rect.left) * (canvas.width / rect.width), 
                 y: (e.clientY - rect.top) * (canvas.height / rect.height) 
             };
+            startDragOffset = { x: offsetX, y: offsetY };
             canvas.style.cursor = 'grabbing';
         });
 
@@ -347,30 +396,25 @@
             const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
             if (isDragging) {
-                const dx = mouseX - lastMouse.x;
-                const dy = mouseY - lastMouse.y;
-                
-                camX -= dx / zoom;
-                camY += dy / zoom; // Y на экране растет вниз, в игре вверх
-                
-                lastMouse = { x: mouseX, y: mouseY };
+                offsetX = startDragOffset.x + (mouseX - startDragMouse.x);
+                offsetY = startDragOffset.y + (mouseY - startDragMouse.y);
                 drawMap();
                 mapTooltip.style.display = 'none';
                 return;
             }
 
-            // Hit Detection (Наведение на систему)
+            // Hit Detection (Наведение)
             let hoveredCell = null;
-            let minDist = Infinity;
-            // Радиус захвата: 5 пикселей минимум, или половина размера клетки
-            let hitRadius = Math.max(5, zoom / 2); 
 
             globalCoordMap.forEach((cell) => {
-                let sc = worldToScreen(cell.x, cell.y);
-                let dist = Math.hypot(mouseX - sc.x, mouseY - sc.y);
-                
-                if (dist < hitRadius && dist < minDist) {
-                    minDist = dist;
+                let sc = getFinalScreenCoords(cell.x, cell.y);
+                let worldSize = 1500; 
+                let sizePx = (worldSize / WORLD_W) * canvas.width * scale;
+                if (sizePx < 6) sizePx = 6; 
+                let half = sizePx / 2;
+
+                if (mouseX >= sc.x - half && mouseX <= sc.x + half &&
+                    mouseY >= sc.y - half && mouseY <= sc.y + half) {
                     hoveredCell = cell;
                 }
             });
@@ -401,30 +445,21 @@
         canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
         canvas.addEventListener('mouseleave', () => { isDragging = false; mapTooltip.style.display = 'none'; canvas.style.cursor = 'default'; });
 
-        // Мягкий и точный зум в курсор мыши
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-            // Игровые координаты под курсором ДО зума
-            const worldBefore = screenToWorld(mouseX, mouseY);
+            const zoomFactor = 1.15; 
+            let newScale = e.deltaY < 0 ? scale * zoomFactor : scale / zoomFactor;
+            
+            if (newScale < 0.2) newScale = 0.2;
+            if (newScale > 100000) newScale = 100000; 
 
-            const zoomFactor = 1.15; // +15% за шаг скролла
-            if (e.deltaY < 0) { zoom *= zoomFactor; } 
-            else { zoom /= zoomFactor; }
-
-            // Ограничения
-            if (zoom < 0.001) zoom = 0.001;  // Максимальное отдаление
-            if (zoom > 100) zoom = 100;      // 1 система = 100 пикселей на экране (максимальное приближение)
-
-            // Игровые координаты под курсором ПОСЛЕ зума
-            const worldAfter = screenToWorld(mouseX, mouseY);
-
-            // Корректируем центр камеры так, чтобы точка под мышкой не съехала
-            camX += (worldBefore.x - worldAfter.x);
-            camY += (worldBefore.y - worldAfter.y);
+            offsetX -= (mouseX - offsetX) * (newScale / scale - 1);
+            offsetY -= (mouseY - offsetY) * (newScale / scale - 1);
+            scale = newScale;
 
             mapTooltip.style.display = 'none'; 
             drawMap();
@@ -486,17 +521,16 @@
 
         function drawMap() {
             if(!canvas) return;
+            
             const cw = canvas.width;  
             const ch = canvas.height; 
 
-            // Очищаем экран
             ctx.clearRect(0, 0, cw, ch);
 
-            // Базовые границы мира (Ромб)
-            let topC = worldToScreen(0, 480000);
-            let botC = worldToScreen(0, -160000);
-            let leftC = worldToScreen(-320000, 160000);
-            let rightC = worldToScreen(320000, 160000);
+            let topC = getFinalScreenCoords(0, 480000);
+            let botC = getFinalScreenCoords(0, -160000);
+            let leftC = getFinalScreenCoords(-320000, 160000);
+            let rightC = getFinalScreenCoords(320000, 160000);
 
             ctx.strokeStyle = '#2a3b5c';
             ctx.lineWidth = 1;
@@ -508,61 +542,64 @@
             ctx.closePath();
             ctx.stroke();
 
-            // Оси координат
             ctx.strokeStyle = '#131a2b';
             ctx.beginPath();
             ctx.moveTo(topC.x, topC.y); ctx.lineTo(botC.x, botC.y); 
             ctx.moveTo(leftC.x, leftC.y); ctx.lineTo(rightC.x, rightC.y); 
             ctx.stroke();
 
-            // 1. ДИНАМИЧЕСКАЯ СЕТКА (отрисовывается только когда крупный масштаб)
-            // Когда зум большой (> 5 пикселей на 1 единицу), показываем каждую отдельную координату (клетку 1х1)
-            // Иначе показываем крупные зоны.
-            if (zoom > 0.05) {
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            // Динамический размер. Система — это условно 1500 единиц игрового мира
+            let worldSize = 1500; 
+            let sizePx = (worldSize / WORLD_W) * cw * scale; 
+
+            // Сетка рисуется только если мы призумились (когда размер клетки > 15px)
+            if (sizePx >= 15) {
+                ctx.strokeStyle = '#1e293b';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
 
-                let step = 10000;
-                if (zoom > 0.5) step = 1000;
-                if (zoom > 5) step = 100;
-                if (zoom > 15) step = 1; // 1 клетка = 1 система на максимальном зуме
+                let minWorldX = (0 - offsetX) / scale;
+                let maxWorldX = (cw - offsetX) / scale;
+                let minWorldY = (0 - offsetY) / scale;
+                let maxWorldY = (ch - offsetY) / scale;
 
-                let tlWorld = screenToWorld(0, 0);
-                let brWorld = screenToWorld(cw, ch);
+                let gameMinX = (minWorldX / cw) * WORLD_W - 320000;
+                let gameMaxX = (maxWorldX / cw) * WORLD_W - 320000;
+                let gameMinY = 480000 - (maxWorldY / ch) * WORLD_H;
+                let gameMaxY = 480000 - (minWorldY / ch) * WORLD_H;
 
-                let startX = Math.floor(Math.min(tlWorld.x, brWorld.x) / step) * step;
-                let endX = Math.ceil(Math.max(tlWorld.x, brWorld.x) / step) * step;
-                let startY = Math.floor(Math.min(tlWorld.y, brWorld.y) / step) * step;
-                let endY = Math.ceil(Math.max(tlWorld.y, brWorld.y) / step) * step;
+                let startX = Math.floor((gameMinX + worldSize/2) / worldSize) * worldSize - worldSize/2;
+                let endX = Math.ceil((gameMaxX + worldSize/2) / worldSize) * worldSize + worldSize/2;
+                let startY = Math.floor((gameMinY + worldSize/2) / worldSize) * worldSize - worldSize/2;
+                let endY = Math.ceil((gameMaxY + worldSize/2) / worldSize) * worldSize + worldSize/2;
 
-                for (let x = startX; x <= endX; x += step) {
-                    let p1 = worldToScreen(x, Math.min(tlWorld.y, brWorld.y));
-                    let p2 = worldToScreen(x, Math.max(tlWorld.y, brWorld.y));
-                    ctx.moveTo(Math.round(p1.x)-0.5, p1.y); ctx.lineTo(Math.round(p2.x)-0.5, p2.y);
+                for (let x = startX; x <= endX; x += worldSize) {
+                    let p1 = getFinalScreenCoords(x, -160000);
+                    let p2 = getFinalScreenCoords(x, 480000);
+                    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
                 }
-                for (let y = startY; y <= endY; y += step) {
-                    let p1 = worldToScreen(Math.min(tlWorld.x, brWorld.x), y);
-                    let p2 = worldToScreen(Math.max(tlWorld.x, brWorld.x), y);
-                    ctx.moveTo(p1.x, Math.round(p1.y)-0.5); ctx.lineTo(p2.x, Math.round(p2.y)-0.5);
+                for (let y = startY; y <= endY; y += worldSize) {
+                    let p1 = getFinalScreenCoords(-320000, y);
+                    let p2 = getFinalScreenCoords(320000, y);
+                    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
                 }
                 ctx.stroke();
             }
 
-            // Ориентиры
-            let sun = worldToScreen(0, 0);
+            let sun = getFinalScreenCoords(0, 0);
             ctx.fillStyle = '#ffcc00';
             ctx.beginPath(); ctx.arc(sun.x, sun.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(255, 204, 0, 0.2)';
+            ctx.beginPath(); ctx.arc(sun.x, sun.y, 8, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#8fa3c7'; ctx.font = `11px Arial`; 
-            ctx.fillText('☀️ Sun (0:0)', sun.x + 10, sun.y + 4);
+            ctx.fillText('Sun (0:0)', sun.x + 10, sun.y + 4);
 
-            let bh = worldToScreen(0, 160000);
+            let bh = getFinalScreenCoords(0, 160000);
             ctx.fillStyle = '#b388ff';
             ctx.beginPath(); ctx.arc(bh.x, bh.y, 4, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = '#8fa3c7'; 
-            ctx.fillText('🕳️ Blackhole', bh.x + 10, bh.y + 4);
+            ctx.fillText('Blackhole', bh.x + 10, bh.y + 4);
 
-            // 2. ГРУППИРОВКА ИГРОКОВ (Строго по координатам 1 к 1)
             globalCoordMap.clear(); 
             activeMapPlayers.forEach(p => {
                 p.tracks.forEach(t => {
@@ -574,88 +611,62 @@
                     let cell = globalCoordMap.get(key);
                     let existing = cell.items.find(i => i.player === p.name);
                     if (!existing) {
-                        cell.items.push({ player: p.name, color: p.color, isMoving: t.IsMoving });
+                        cell.items.push({ player: p.name, color: p.color, isMoving: t.IsMoving, rawX: t.X, rawY: t.Y, sys: t.SystemName });
                     } else if (t.IsMoving) {
                         existing.isMoving = true;
                     }
                 });
             });
 
-            // 3. ОТРИСОВКА СИСТЕМ (Клеток)
             globalCoordMap.forEach((cell) => {
-                // Вычисляем экранный центр системы
-                let sc = worldToScreen(cell.x, cell.y);
+                let sc = getFinalScreenCoords(cell.x, cell.y);
+                let currentSizePx = sizePx; 
+
+                // Если отдалено, делаем минимальный видимый размер
+                if (currentSizePx < 6) currentSizePx = 6;
                 
-                // Размер одной клетки на экране (1 единица координаты = zoom пикселей)
-                let sizePx = zoom;
-                let isSmall = false;
+                let half = currentSizePx / 2;
 
-                // Если зум слишком мелкий, искусственно удерживаем точку видимой (мин 6px)
-                if (sizePx < 6) {
-                    sizePx = 6;
-                    isSmall = true;
-                }
-
-                let half = sizePx / 2;
-                let tlX = sc.x - half;
-                let tlY = sc.y - half;
-
-                // Пропускаем объекты за пределами экрана
-                if (tlX > cw || tlX + sizePx < 0 || tlY > ch || tlY + sizePx < 0) return;
-
-                // Убираем суб-пиксельное размытие, чтобы квадраты были четкими
-                tlX = Math.round(tlX);
-                tlY = Math.round(tlY);
-                let w = Math.ceil(sizePx);
-                let h = Math.ceil(sizePx);
+                if (sc.x < -currentSizePx || sc.x > cw + currentSizePx || sc.y < -currentSizePx || sc.y > ch + currentSizePx) return;
 
                 let count = cell.items.length;
 
                 if (count === 1) {
-                    // Один игрок
-                    ctx.fillStyle = cell.items[0].color;
-                    ctx.fillRect(tlX, tlY, w, h);
+                    let item = cell.items[0];
+                    ctx.fillStyle = item.color;
+                    ctx.fillRect(sc.x - half, sc.y - half, currentSizePx, currentSizePx);
 
-                    ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(tlX, tlY, w, h);
-
-                    if (cell.items[0].isMoving && !isSmall) {
+                    if (item.isMoving && currentSizePx > 8) {
                         ctx.fillStyle = '#0b0f19';
-                        ctx.fillRect(tlX + w*0.25, tlY + h*0.25, w*0.5, h*0.5);
+                        ctx.fillRect(sc.x - half/2, sc.y - half/2, currentSizePx/2, currentSizePx/2);
                     }
                 } else if (count === 2) {
-                    // Два игрока (делим пополам)
-                    let halfW = Math.round(w / 2);
                     ctx.fillStyle = cell.items[0].color;
-                    ctx.fillRect(tlX, tlY, halfW, h);
+                    ctx.fillRect(sc.x - half, sc.y - half, half, currentSizePx);
                     
                     ctx.fillStyle = cell.items[1].color;
-                    ctx.fillRect(tlX + halfW, tlY, w - halfW, h);
+                    ctx.fillRect(sc.x, sc.y - half, half, currentSizePx);
                     
-                    ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(tlX, tlY, w, h);
-                    ctx.beginPath(); ctx.moveTo(tlX + halfW, tlY); ctx.lineTo(tlX + halfW, tlY + h); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(sc.x, sc.y - half); ctx.lineTo(sc.x, sc.y + half); ctx.stroke();
                 } else {
-                    // 3 или 4 игрока (четвертинки)
-                    let halfW = Math.round(w / 2);
-                    let halfH = Math.round(h / 2);
                     let subSizes = [
-                        { dx: 0,     dy: 0,     sw: halfW,     sh: halfH }, 
-                        { dx: halfW, dy: 0,     sw: w - halfW, sh: halfH }, 
-                        { dx: 0,     dy: halfH, sw: halfW,     sh: h - halfH }, 
-                        { dx: halfW, dy: halfH, sw: w - halfW, sh: h - halfH }  
+                        { dx: -half, dy: -half, w: half, h: half }, 
+                        { dx: 0,     dy: -half, w: half, h: half }, 
+                        { dx: -half, dy: 0,     w: half, h: half }, 
+                        { dx: 0,     dy: 0,     w: half, h: half }  
                     ];
                     cell.items.forEach((item, idx) => {
                         let sub = subSizes[idx % 4]; 
                         ctx.fillStyle = item.color;
-                        ctx.fillRect(tlX + sub.dx, tlY + sub.dy, sub.sw, sub.sh);
+                        ctx.fillRect(sc.x + sub.dx, sc.y + sub.dy, sub.w, sub.h);
                     });
-                    
+                }
+
+                // Внешняя рамка системы
+                if (currentSizePx >= 4) {
                     ctx.strokeStyle = '#0b0f19';
                     ctx.lineWidth = 1;
-                    ctx.strokeRect(tlX, tlY, w, h);
+                    ctx.strokeRect(sc.x - half, sc.y - half, currentSizePx, currentSizePx);
                 }
             });
         }
