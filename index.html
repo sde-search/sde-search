@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Stardust Radar</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #0b0f19; color: #fff; padding: 20px; }
+        .card { background: #131a2b; border: 1px solid #2a3b5c; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        input, button { padding: 8px; margin: 5px; border-radius: 4px; }
+        button { background: #00ffcc; border: none; font-weight: bold; cursor: pointer; }
+        .result-item { background: #1f2d44; padding: 10px; margin-top: 10px; border-left: 3px solid #00ffcc; }
+    </style>
+</head>
+<body>
+
+    <h1>Радар </h1>
+    <p></p>
+
+    <div class="card">
+        <h3>Тактический сканер (Ближайшие цели)</h3>
+        <input type="number" id="targetX" placeholder="Координата X" value="0">
+        <input type="number" id="targetY" placeholder="Координата Y" value="0">
+        <input type="number" id="minDist" placeholder="Слепая зона" value="0">
+        <label><input type="checkbox" id="ignoreAllies"> Игнорировать своих</label>
+        <button onclick="searchTargets()">Найти врагов</button>
+
+        <div id="targetResults"></div>
+    </div>
+
+    <script>
+        // ВАЖНО: Здесь укажи свой реальный HTTPS адрес от KeenDNS
+        const API_BASE_URL = 'https://твой-домен.keenetic.pro'; 
+
+        async function searchTargets() {
+            const x = document.getElementById('targetX').value;
+            const y = document.getElementById('targetY').value;
+            const minDist = document.getElementById('minDist').value;
+            const ignoreAllies = document.getElementById('ignoreAllies').checked;
+            const resultsDiv = document.getElementById('targetResults');
+
+            resultsDiv.innerHTML = '<i>Загрузка данных с сервера...</i>';
+
+            try {
+                // Делаем fetch запрос к твоему C# серверу
+                const response = await fetch(`${API_BASE_URL}/api/nearest?x=${x}&y=${y}&minDist=${minDist}&ignoreAllies=${ignoreAllies}`);
+                
+                if (!response.ok) throw new Error('Ошибка сети');
+                
+                const data = await response.json(); // Получаем ответ из C# (список объектов)
+
+                if (data.length === 0) {
+                    resultsDiv.innerHTML = '<p style="color:gray;">Никого не найдено.</p>';
+                    return;
+                }
+
+                // Отрисовываем результаты
+                let html = '';
+                data.forEach(target => {
+                    html += `
+                    <div class="result-item">
+                        <strong>Игрок: ${target.PlayerName}</strong> <br>
+                        Дистанция: ${target.Distance} | Координаты: ${target.X}:${target.Y} <br>
+                        ${target.IsMoving ? '⚠️ В движении' : 'Статичен'}
+                    </div>`;
+                });
+                
+                resultsDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error(error);
+                resultsDiv.innerHTML = '<p style="color:red;">Ошибка соединения с домашним сервером.</p>';
+            }
+        }
+    </script>
+</body>
+</html>
