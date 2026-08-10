@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Radar - OSINT</title>
+    <title>Radar - OSINT & Map</title>
     <style>
         :root { 
             --bg: #0b0f19; --card: #131a2b; --border: #2a3b5c; 
@@ -15,8 +15,11 @@
             color: var(--text); 
             padding: 20px; 
             margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        h1 { color: var(--accent); font-size: 24px; margin-bottom: 10px;}
+        h1 { color: var(--accent); font-size: 24px; margin-bottom: 10px; text-align: center;}
         
         .status-panel {
             background: #1f2d44;
@@ -24,6 +27,7 @@
             padding: 12px 20px;
             border-radius: 8px;
             margin-bottom: 20px;
+            width: 100%;
             max-width: 900px;
             box-sizing: border-box;
             display: flex;
@@ -37,17 +41,26 @@
         .card { 
             background: var(--card); 
             border: 1px solid var(--accent); 
-            padding: 20px; 
+            padding: 30px; 
             border-radius: 10px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
+            width: 100%;
             max-width: 900px;
             box-sizing: border-box;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .card-map {
+            max-width: 1200px; 
+            border-color: #b388ff;
         }
         
         .controls { 
             display: flex; 
             gap: 10px; 
             align-items: center; 
+            justify-content: center; 
             flex-wrap: wrap; 
             margin-bottom: 15px; 
         }
@@ -58,9 +71,10 @@
             border: 1px solid var(--border); 
             border-radius: 6px; 
             box-sizing: border-box;
+            text-align: center;
         }
         input[type="number"] { width: 110px; }
-        input[type="text"] { flex: 1; min-width: 250px; }
+        input[type="text"] { flex: 1; min-width: 250px; max-width: 400px; }
         
         button { 
             padding: 9px 20px; 
@@ -74,12 +88,87 @@
         }
         button:hover { opacity: 0.8; }
         
-        .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .results { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+            gap: 10px; 
+            text-align: left; 
+        }
         .result-item { 
             background: #1f2d44; 
             padding: 10px; 
             border-radius: 6px; 
             border-left: 4px solid var(--border); 
+        }
+
+        .map-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .map-container { 
+            position: relative; 
+            background: #000; 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            width: 100%; 
+            max-width: 800px; 
+            aspect-ratio: 1/1; 
+            overflow: hidden; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        .map-container canvas { 
+            width: 100%; 
+            height: 100%; 
+            display: block; 
+            cursor: grab; 
+        }
+        .map-container canvas:active {
+            cursor: grabbing;
+        }
+
+        .map-tooltip {
+            position: absolute;
+            display: none;
+            background: rgba(19, 26, 43, 0.95);
+            border: 1px solid var(--accent);
+            padding: 12px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            pointer-events: none; 
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            white-space: nowrap;
+            text-align: left;
+        }
+
+        .map-legend { 
+            margin-top: 20px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+            justify-content: center; 
+            width: 100%;
+        }
+        .legend-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            background: #1f2d44; 
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            min-width: 200px; 
+        }
+        .legend-color { 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            display: inline-block; 
+            margin-right: 8px; 
+            vertical-align: middle;
         }
     </style>
 </head>
@@ -87,7 +176,6 @@
 
     <h1>🛰️ Внешний радар OSINT</h1>
     
-    <!-- Панель статуса -->
     <div class="status-panel" id="serverStatusPanel">
         <div class="status-info">
             <span style="color: var(--muted);">Подключение к серверу...</span>
@@ -96,12 +184,12 @@
     </div>
     
     <div class="card">
-        <h3 style="color: var(--accent); margin-top: 0;">🎯 Глобальный поиск</h3>
-        <p style="color: var(--muted); font-size: 13px;">Поиск баз в заданном радиусе (до 100 объектов).</p>
+        <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">🎯 Глобальный поиск</h3>
+        <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Поиск баз в заданном радиусе (до 100 объектов).</p>
         
         <div class="controls">
             <input type="number" id="targetX" placeholder="Ось X">
-            <span style="color: var(--muted);">:</span>
+            <span style="color: var(--muted); font-weight: bold;">:</span>
             <input type="number" id="targetY" placeholder="Ось Y">
             <input type="number" id="minDist" placeholder="Слепая зона" title="Не показывать объекты ближе этой дистанции">
             <input type="number" id="maxDist" placeholder="Радиус (макс)" title="Искать не дальше этой дистанции (оставь пустым для всей галактики)">
@@ -111,8 +199,30 @@
             <button onclick="searchTargets()">Сканировать сектор</button>
         </div>
         
-        <div style="margin-bottom: 15px; font-size: 13px; color: var(--accent); font-weight: bold;" id="statsLabel"></div>
+        <div style="margin-bottom: 15px; font-size: 14px; color: var(--accent); font-weight: bold;" id="statsLabel"></div>
         <div id="targetResults" class="results"></div>
+    </div>
+
+    <div class="card card-map">
+        <h3 style="color: #b388ff; margin-top: 0; font-size: 20px;">🗺️ Тактическая Карта Галактики</h3>
+        <p style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px;">
+            • Масштабируйте карту <b>колесиком мыши</b>, перемещайтесь <b>зажав кнопку</b>.<br>
+            • Можно наложить до 5 игроков. <b style="color: #fff;">Квадрат</b> — флот в движении, <b style="color: #fff;">Круг</b> — статичная база.
+        </p>
+
+        <div class="controls" style="margin-bottom: 25px;">
+            <input type="text" id="mapPlayerInput" placeholder="Введите точное имя игрока">
+            <button style="background: #b388ff;" onclick="addPlayerToMap()">+ Вывести на карту</button>
+        </div>
+
+        <div class="map-wrapper">
+            <div class="map-container">
+                <canvas id="galaxyMap" width="800" height="800"></canvas>
+                <div id="mapTooltip" class="map-tooltip"></div>
+            </div>
+            
+            <div class="map-legend" id="mapLegend"></div>
+        </div>
     </div>
 
     <script>
@@ -121,37 +231,24 @@
         async function checkServerStatus() {
             const panel = document.querySelector('#serverStatusPanel .status-info');
             panel.innerHTML = '<span style="color: var(--muted);">Обновление данных...</span>';
-            
             try {
                 const res = await fetch(`${API_BASE_URL}/api/status`);
-                if (!res.ok) throw new Error('Ошибка сети');
+                if (!res.ok) throw new Error();
                 const data = await res.json();
                 
-                let radarStatus = '';
-                if (data.isScannerRunning) {
-                    radarStatus = `<strong style="color: var(--accent);">🔄 Сканирование (${data.scannerProgress} / ${data.scannerTotal})</strong>`;
-                } else if (!data.scannerEnabled) {
-                    radarStatus = `<span style="color: var(--muted);">Выключен</span>`;
-                } else if (data.lastScannerError) {
-                    radarStatus = `<strong style="color: var(--red);">Ошибка сканирования</strong>`;
-                } else {
-                    radarStatus = `<strong style="color: var(--yellow);">Спит (по расписанию)</strong>`;
-                }
+                let radarStatus = data.isScannerRunning ? `<strong style="color: var(--accent);">🔄 Сканирование (${data.scannerProgress} / ${data.scannerTotal})</strong>` :
+                                  (!data.scannerEnabled ? `<span style="color: var(--muted);">Выключен</span>` :
+                                  (data.lastScannerError ? `<strong style="color: var(--red);">Ошибка сканирования</strong>` :
+                                  `<strong style="color: var(--yellow);">Спит (по расписанию)</strong>`));
 
                 panel.innerHTML = `
                     <div style="margin-bottom: 4px;">
                         <span style="color: var(--muted);">Свежая запись в БД:</span> 
                         <strong style="color: #fff;">${data.lastEventTime}</strong>
                     </div>
-                    <div>
-                        <span style="color: var(--muted);">Состояние парсера:</span> 
-                        ${radarStatus}
-                    </div>
+                    <div><span style="color: var(--muted);">Состояние парсера:</span> ${radarStatus}</div>
                 `;
-            } catch (e) {
-                console.error(e);
-                panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>';
-            }
+            } catch (e) { panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>'; }
         }
 
         async function searchTargets() {
@@ -164,30 +261,19 @@
             const resDiv = document.getElementById('targetResults');
             const statsLabel = document.getElementById('statsLabel');
 
-            if (x === '' || y === '') { 
-                resDiv.innerHTML = '<span style="color:var(--red);">Введите координаты X и Y</span>'; 
-                statsLabel.innerText = '';
-                return; 
-            }
-            
+            if (x === '' || y === '') { resDiv.innerHTML = '<span style="color:var(--red);">Введите координаты X и Y</span>'; statsLabel.innerText = ''; return; }
             resDiv.innerHTML = '<span style="color:var(--yellow);">Запрос к базе данных...</span>';
             statsLabel.innerText = '';
 
             try {
-                // Обращаемся к новому эндпоинту global-nearest!
                 const res = await fetch(`${API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
-                if (!res.ok) throw new Error('Network error');
-                
+                if (!res.ok) throw new Error();
                 const data = await res.json();
 
-                if (data.length === 0) { 
-                    resDiv.innerHTML = '<span style="color:var(--muted);">В заданном радиусе никого не найдено.</span>'; 
-                    return; 
-                }
+                if (data.length === 0) { resDiv.innerHTML = '<span style="color:var(--muted);">В заданном радиусе никого не найдено.</span>'; return; }
 
                 statsLabel.innerText = `Найдено объектов: ${data.length}`;
                 let html = '';
-                
                 data.forEach((t) => {
                     let bColor = 'var(--muted)';
                     if (t.Distance <= 200) bColor = 'var(--red)';
@@ -196,7 +282,6 @@
                     else if (t.Distance <= 2000) bColor = 'var(--accent)';
 
                     let fStyle = t.IsMoving ? 'font-style: italic;' : '';
-                    
                     html += `
                     <div class="result-item" style="border-left-color: ${bColor}; ${fStyle}">
                         <div style="color:${bColor}; font-weight:bold; margin-bottom:5px;">Дистанция: ${t.Distance}</div>
@@ -207,13 +292,262 @@
                     </div>`;
                 });
                 resDiv.innerHTML = html;
-            } catch (e) {
-                console.error(e);
-                resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером. Убедись, что бэкенд обновлен и запущен.</span>';
+            } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; }
+        }
+
+        // --- ЛОГИКА ИНТЕРАКТИВНОЙ КАРТЫ ---
+        const mapColors = ['#00ffcc', '#ff5252', '#ff9800', '#b388ff', '#ffcc00'];
+        let activeMapPlayers = [];
+        
+        const canvas = document.getElementById('galaxyMap');
+        const ctx = canvas.getContext('2d');
+        const mapTooltip = document.getElementById('mapTooltip');
+
+        const getC = (x, y) => ({ 
+            cx: ((x + 320000) / 640000) * 800, 
+            cy: ((480000 - y) / 640000) * 800 
+        });
+
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let isDragging = false;
+        let startDragMouse = { x: 0, y: 0 };
+        let startDragOffset = { x: 0, y: 0 };
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            startDragMouse = { x: e.clientX * scaleX, y: e.clientY * scaleY };
+            startDragOffset = { x: offsetX, y: offsetY };
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            if (isDragging) {
+                const dx = (e.clientX * scaleX) - startDragMouse.x;
+                const dy = (e.clientY * scaleY) - startDragMouse.y;
+                offsetX = startDragOffset.x + dx;
+                offsetY = startDragOffset.y + dy;
+                drawMap();
+                mapTooltip.style.display = 'none';
+                return;
+            }
+
+            // Hit Detection (Наведение курсора)
+            let hoveredItems = [];
+            let hoverCoords = null;
+            let minHitDist = 8; 
+
+            activeMapPlayers.forEach(p => {
+                p.tracks.forEach(t => {
+                    const baseC = getC(t.X, t.Y);
+                    const screenX = baseC.cx * scale + offsetX;
+                    const screenY = baseC.cy * scale + offsetY;
+                    
+                    const dist = Math.hypot(mouseX - screenX, mouseY - screenY);
+                    
+                    if (dist < minHitDist) {
+                        if (!hoverCoords) hoverCoords = { x: t.X, y: t.Y, sys: t.SystemName, isMoving: t.IsMoving };
+                        if (t.X === hoverCoords.x && t.Y === hoverCoords.y) {
+                            hoveredItems.push(p.name);
+                        }
+                    }
+                });
+            });
+
+            if (hoverCoords) {
+                let playersAtCoord = [...new Set(hoveredItems)].join(', ');
+                let systemName = hoverCoords.sys ? ` <span style="color:#8fa3c7; font-weight:normal;">(${hoverCoords.sys})</span>` : '';
+                let statusText = hoverCoords.isMoving ? '<span style="color:var(--orange);">⚠️ В движении (Флот)</span>' : '<span style="color:#fff;">Статично (База)</span>';
+
+                mapTooltip.innerHTML = `
+                    <div style="color: var(--accent); font-weight: bold; margin-bottom: 8px; font-size: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">📍 ${hoverCoords.x} : ${hoverCoords.y}${systemName}</div>
+                    <div style="margin-bottom: 5px;">Игрок: <b style="color: #fff;">${playersAtCoord}</b></div>
+                    <div style="font-size: 13px; color: #8fa3c7;">Статус: ${statusText}</div>
+                `;
+                
+                mapTooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+                mapTooltip.style.top = (e.clientY - rect.top + 15) + 'px';
+                mapTooltip.style.display = 'block';
+                canvas.style.cursor = 'pointer';
+            } else {
+                mapTooltip.style.display = 'none';
+                canvas.style.cursor = 'grab';
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; mapTooltip.style.display = 'none'; canvas.style.cursor = 'default'; });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomSensitivity = 0.2; // Ускорил зум
+            const delta = e.deltaY < 0 ? 1 + zoomSensitivity : 1 - zoomSensitivity;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            const worldX = (mouseX - offsetX) / scale;
+            const worldY = (mouseY - offsetY) / scale;
+
+            let newScale = scale * delta;
+            if (newScale < 0.5) newScale = 0.5;
+            if (newScale > 50000) newScale = 50000; // Огромный лимит зума для мельчайших деталей!
+            scale = newScale;
+
+            offsetX = mouseX - worldX * scale;
+            offsetY = mouseY - worldY * scale;
+
+            mapTooltip.style.display = 'none'; 
+            drawMap();
+        }, { passive: false });
+
+
+        async function addPlayerToMap() {
+            const input = document.getElementById('mapPlayerInput');
+            const pName = input.value.trim();
+            if(!pName) return;
+            if(activeMapPlayers.length >= 5) { alert('Максимум 5 игроков на карте!'); return; }
+            if(activeMapPlayers.find(p => p.name.toLowerCase() === pName.toLowerCase())) { alert('Игрок уже добавлен.'); return; }
+
+            const btn = input.nextElementSibling;
+            const originalText = btn.innerText;
+            btn.innerText = 'Загрузка...';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
+                if(!res.ok) throw new Error();
+                const data = await res.json();
+                
+                if(data.length === 0) { alert(`Объекты игрока "${pName}" не найдены в базе данных.`); btn.innerText = originalText; return; }
+
+                const color = mapColors[activeMapPlayers.length];
+                activeMapPlayers.push({ name: data[0].PlayerName || pName, color: color, tracks: data });
+                
+                input.value = '';
+                updateMapLegend();
+                drawMap();
+            } catch(e) { 
+                alert('Ошибка соединения при загрузке данных для карты.'); 
+            } finally {
+                btn.innerText = originalText;
             }
         }
 
-        window.onload = checkServerStatus;
+        function removePlayerFromMap(index) {
+            activeMapPlayers.splice(index, 1);
+            updateMapLegend();
+            drawMap();
+        }
+
+        function updateMapLegend() {
+            const container = document.getElementById('mapLegend');
+            container.innerHTML = '';
+            activeMapPlayers.forEach((p, i) => {
+                container.innerHTML += `
+                    <div class="legend-item" style="border-left: 3px solid ${p.color}">
+                        <div>
+                            <span class="legend-color" style="background: ${p.color};"></span>
+                            <b style="color:#fff; font-size:14px;">${p.name}</b> 
+                            <span style="color:var(--muted); font-size:12px; margin-left:5px;">(${p.tracks.length} шт.)</span>
+                        </div>
+                        <button style="padding: 2px 8px; background: transparent; border: 1px solid var(--red); color: var(--red); cursor: pointer;" onclick="removePlayerFromMap(${i})">✖</button>
+                    </div>
+                `;
+            });
+        }
+
+        function drawMap() {
+            if(!canvas) return;
+            
+            const cw = canvas.width;  
+            const ch = canvas.height; 
+            const hw = cw / 2;        
+
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, cw, ch);
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+
+            ctx.lineWidth = 1 / scale;
+
+            ctx.strokeStyle = '#2a3b5c';
+            ctx.beginPath();
+            ctx.moveTo(hw, 0);   
+            ctx.lineTo(cw, hw); 
+            ctx.lineTo(hw, cw); 
+            ctx.lineTo(0, hw);   
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.strokeStyle = '#131a2b';
+            ctx.beginPath();
+            ctx.moveTo(hw, 0); ctx.lineTo(hw, cw); 
+            ctx.moveTo(0, hw); ctx.lineTo(cw, hw); 
+            ctx.stroke();
+
+            // Ориентир 1: Солнце
+            let sun = getC(0, 0);
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath(); ctx.arc(sun.cx, sun.cy, 6 / scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(255, 204, 0, 0.2)';
+            ctx.beginPath(); ctx.arc(sun.cx, sun.cy, 12 / scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8fa3c7'; 
+            ctx.font = `${11 / scale}px Arial`; 
+            ctx.fillText('Sun (0:0)', sun.cx + (10/scale), sun.cy + (4/scale));
+
+            // Ориентир 2: Черная дыра
+            let bh = getC(0, 160000);
+            ctx.fillStyle = '#b388ff';
+            ctx.beginPath(); ctx.arc(bh.cx, bh.cy, 5 / scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(179, 136, 255, 0.2)';
+            ctx.beginPath(); ctx.arc(bh.cx, bh.cy, 10 / scale, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8fa3c7'; 
+            ctx.fillText('Blackhole', bh.cx + (10/scale), bh.cy + (4/scale));
+
+            activeMapPlayers.forEach(p => {
+                ctx.fillStyle = p.color;
+                p.tracks.forEach(t => {
+                    let c = getC(t.X, t.Y);
+                    
+                    if(c.cx < 0 || c.cx > cw || c.cy < 0 || c.cy > cw) return;
+
+                    // Больше не сжимаем размер до микроскопического. 
+                    // Радиус ВСЕГДА 3 пикселя на твоем мониторе, независимо от зума!
+                    let ptSize = 3 / scale; 
+
+                    if (t.IsMoving) {
+                        ctx.fillRect(c.cx - ptSize, c.cy - ptSize, ptSize*2, ptSize*2);
+                    } else {
+                        ctx.beginPath(); 
+                        ctx.arc(c.cx, c.cy, ptSize, 0, Math.PI*2); 
+                        ctx.fill();
+                    }
+                });
+            });
+
+            ctx.restore();
+        }
+
+        window.onload = () => {
+            checkServerStatus();
+            drawMap(); 
+        };
     </script>
 </body>
 </html>
