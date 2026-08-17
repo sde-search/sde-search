@@ -193,10 +193,6 @@
     </style>
     
     <script>
-        const API_BASE_URL = 'https://sde.domedome.crazedns.ru'; 
-        const BACKUP_URL = 'https://racoonbot.crazedns.ru/webdav';
-        let currentDataSource = 'main'; // 'main' или 'backup'
-
         // ПЕРЕХВАТЧИК FETCH: автоматически добавляет токен Basic Auth ко всем запросам
         const originalFetch = window.fetch;
         window.fetch = async function() {
@@ -298,6 +294,8 @@
     </div>
 
     <script>
+        const API_BASE_URL = 'https://sde.domedome.crazedns.ru'; 
+
         // --- ЛОГИКА АВТОРИЗАЦИИ НА ФРОНТЕНДЕ ---
         window.onload = () => {
             if (sessionStorage.getItem('authToken')) {
@@ -314,18 +312,11 @@
             
             sessionStorage.setItem('authToken', token);
             
-            try {
-                const res = await originalFetch(`${API_BASE_URL}/api/status`, {
-                    headers: { 'Authorization': 'Basic ' + token }
-                });
-                if (res.ok) {
-                    document.getElementById('loginError').style.display = 'none';
-                    unlockInterface();
-                } else {
-                    document.getElementById('loginError').style.display = 'block';
-                    sessionStorage.removeItem('authToken');
-                }
-            } catch (e) {
+            const res = await fetch(`${API_BASE_URL}/api/status`);
+            if (res.ok) {
+                document.getElementById('loginError').style.display = 'none';
+                unlockInterface();
+            } else {
                 document.getElementById('loginError').style.display = 'block';
                 sessionStorage.removeItem('authToken');
             }
@@ -342,14 +333,7 @@
         // --- ФУНКЦИЯ БЕЗОПАСНОГО СКАЧИВАНИЯ ФАЙЛОВ ---
         async function downloadFile(endpoint, filename) {
             try {
-                let targetUrl = `${API_BASE_URL}${endpoint}`;
-                let res = await originalFetch(targetUrl);
-                
-                if (!res.ok && currentDataSource === 'backup') {
-                    targetUrl = `${BACKUP_URL}${endpoint.replace('/api/download', '')}`;
-                    res = await originalFetch(targetUrl);
-                }
-
+                const res = await fetch(`${API_BASE_URL}${endpoint}`);
                 if (!res.ok) throw new Error();
                 const blob = await res.blob();
                 const link = document.createElement('a');
@@ -359,63 +343,34 @@
                 link.click();
                 document.body.removeChild(link);
             } catch(e) { 
-                alert("Ошибка скачивания файла. Проверьте соединение."); 
+                alert("Ошибка скачивания файла. Проверьте авторизацию."); 
             }
         }
 
-        // --- ОСНОВНОЙ ФУНКЦИОНАЛ СТРАНИЦЫ И ПЕРЕКЛЮЧЕНИЕ БАЗ ---
+        // --- ОСНОВНОЙ ФУНКЦИОНАЛ СТРАНИЦЫ ---
         async function checkServerStatus() {
             const panel = document.querySelector('#serverStatusPanel .status-info');
-            panel.innerHTML = '<span style="color: var(--muted);">Проверка состояния сервера...</span>';
-            
+            panel.innerHTML = '<span style="color: var(--muted);">Обновление данных...</span>';
             try {
-                // 1. Пробуем основной API
-                const res = await originalFetch(`${API_BASE_URL}/api/status`);
-                if (res.ok) {
-                    const data = await res.json();
-                    currentDataSource = 'main';
-                    
-                    let radarStatus = data.isScannerRunning ? `<strong style="color: var(--accent);">🔄 Сканирование (${data.scannerProgress} / ${data.scannerTotal})</strong>` :
-                                    (!data.scannerEnabled ? `<span style="color: var(--muted);">Выключен</span>` :
-                                    (data.lastScannerError ? `<strong style="color: var(--red);">Ошибка сканирования</strong>` :
-                                    `<strong style="color: var(--yellow);">Спит (по расписанию)</strong>`));
+                const res = await fetch(`${API_BASE_URL}/api/status`);
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                let radarStatus = data.isScannerRunning ? `<strong style="color: var(--accent);">🔄 Сканирование (${data.scannerProgress} / ${data.scannerTotal})</strong>` :
+                                  (!data.scannerEnabled ? `<span style="color: var(--muted);">Выключен</span>` :
+                                  (data.lastScannerError ? `<strong style="color: var(--red);">Ошибка сканирования</strong>` :
+                                  `<strong style="color: var(--yellow);">Спит (по расписанию)</strong>`));
 
-                    let dbTime = data.lastRadarTime || data.lastEventTime || "-";
+                let dbTime = data.lastRadarTime || data.lastEventTime || "-";
 
-                    panel.innerHTML = `
-                        <div style="margin-bottom: 4px;">
-                            <span style="color: var(--muted);">Источник данных:</span> 
-                            <strong style="color: var(--accent);">🟢 Основная база (API)</strong>
-                        </div>
-                        <div style="margin-bottom: 4px;">
-                            <span style="color: var(--muted);">Свежая запись в БД:</span> 
-                            <strong style="color: #fff;">${dbTime}</strong>
-                        </div>
-                        <div><span style="color: var(--muted);">Состояние парсера:</span> ${radarStatus}</div>
-                    `;
-                    return;
-                }
-                throw new Error("Main API down");
-            } catch (e) {
-                // 2. Если основной API недоступен, проверяем резервный путь
-                try {
-                    const fallbackRes = await originalFetch(`${BACKUP_URL}/fallback_systems.json`);
-                    if (fallbackRes.ok) {
-                        currentDataSource = 'backup';
-                        panel.innerHTML = `
-                            <div style="margin-bottom: 4px;">
-                                <span style="color: var(--muted);">Источник данных:</span> 
-                                <strong style="color: var(--orange);">⚠️ Резервная база (WebDAV / бэкап)</strong>
-                            </div>
-                            <div><span style="color: var(--red);">Основной сервер недоступен, используется резервное хранилище.</span></div>
-                        `;
-                        return;
-                    }
-                } catch (err) {}
-
-                currentDataSource = 'main';
-                panel.innerHTML = '<strong style="color: var(--red);">❌ Основная и резервная база недоступны</strong>';
-            }
+                panel.innerHTML = `
+                    <div style="margin-bottom: 4px;">
+                        <span style="color: var(--muted);">Свежая запись в БД:</span> 
+                        <strong style="color: #fff;">${dbTime}</strong>
+                    </div>
+                    <div><span style="color: var(--muted);">Состояние парсера:</span> ${radarStatus}</div>
+                `;
+            } catch (e) { panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>'; }
         }
 
         async function searchTargets() {
@@ -433,31 +388,9 @@
             statsLabel.innerText = '';
 
             try {
-                let data = [];
-
-                if (currentDataSource === 'backup') {
-                    // Читаем резервный JSON с флешки роутера
-                    const res = await originalFetch(`${BACKUP_URL}/fallback_systems.json`);
-                    if (!res.ok) throw new Error("Fallback load error");
-                    const allSystems = await res.json();
-                    
-                    const ignList = ignPlayers ? ignPlayers.split(',').map(s => s.trim().toLowerCase()) : [];
-
-                    // Фильтрация данных на клиенте
-                    data = allSystems.filter(sys => {
-                        const dist = Math.hypot(sys.X - x, sys.Y - y);
-                        if (dist < md) return false;
-                        if (maxD > 0 && dist > maxD) return false;
-                        if (ignList.length > 0 && sys.PlayerName && ignList.includes(sys.PlayerName.toLowerCase())) return false;
-                        sys.Distance = dist; // проставляем дистанцию для сортировки
-                        return true;
-                    });
-                } else {
-                    // Штатный запрос к основному API
-                    const res = await fetch(`${API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
-                    if (!res.ok) throw new Error("API error");
-                    data = await res.json();
-                }
+                const res = await fetch(`${API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
+                if (!res.ok) return;
+                const data = await res.json();
 
                 if (data.length === 0) { resDiv.innerHTML = '<span style="color:var(--muted);">В заданном радиусе никого не найдено.</span>'; return; }
 
@@ -527,7 +460,7 @@
                 }
 
                 resDiv.innerHTML = html;
-            } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером и резервной базой.</span>'; }
+            } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; }
         }
 
         // --- ЛОГИКА ИНТЕРАКТИВНОЙ КАРТЫ СИСТЕМ ---
@@ -538,6 +471,7 @@
         const ctx = canvas.getContext('2d');
         const mapTooltip = document.getElementById('mapTooltip');
 
+        // ИДЕАЛЬНАЯ МАТЕМАТИКА: 1 координата = 1 клетка
         let camX = 0;
         let camY = 0; 
         let zoom = 0.00125; 
@@ -641,7 +575,7 @@
             else { zoom /= zoomFactor; }
 
             if (zoom < 0.0001) zoom = 0.0001;  
-            if (zoom > 100) zoom = 100;     
+            if (zoom > 100) zoom = 100;      
 
             const worldAfter = screenToWorld(mouseX, mouseY);
 
@@ -664,17 +598,9 @@
             btn.innerText = 'Загрузка...';
 
             try {
-                let data = [];
-                if (currentDataSource === 'backup') {
-                    const res = await originalFetch(`${BACKUP_URL}/fallback_tracks.json`);
-                    if (!res.ok) throw new Error();
-                    const allTracks = await res.json();
-                    data = allTracks.filter(t => t.PlayerName && t.PlayerName.toLowerCase() === pName.toLowerCase());
-                } else {
-                    const res = await fetch(`${API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
-                    if(!res.ok) return;
-                    data = await res.json();
-                }
+                const res = await fetch(`${API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
+                if(!res.ok) return;
+                const data = await res.json();
                 
                 if(data.length === 0) { alert(`Объекты игрока "${pName}" не найдены в базе данных.`); btn.innerText = originalText; return; }
 
@@ -721,6 +647,7 @@
 
             ctx.clearRect(0, 0, cw, ch);
 
+            // Границы галактики
             let topC = worldToScreen(0, 480000);
             let botC = worldToScreen(0, -160000);
             let leftC = worldToScreen(-320000, 160000);
@@ -742,6 +669,7 @@
             ctx.moveTo(leftC.x, leftC.y); ctx.lineTo(rightC.x, rightC.y); 
             ctx.stroke();
 
+            // Динамическая сетка
             if (zoom > 0.05) {
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
                 ctx.lineWidth = 1;
@@ -855,9 +783,9 @@
                     let halfW = Math.round(w / 2);
                     let halfH = Math.round(h / 2);
                     let subSizes = [
-                        { dx: 0,   dy: 0,   sw: halfW,   sh: halfH }, 
-                        { dx: halfW, dy: 0,   sw: w - halfW, sh: halfH }, 
-                        { dx: 0,   dy: halfH, sw: halfW,   sh: h - halfH }, 
+                        { dx: 0,     dy: 0,     sw: halfW,     sh: halfH }, 
+                        { dx: halfW, dy: 0,     sw: w - halfW, sh: halfH }, 
+                        { dx: 0,     dy: halfH, sw: halfW,     sh: h - halfH }, 
                         { dx: halfW, dy: halfH, sw: w - halfW, sh: h - halfH }  
                     ];
                     cell.items.forEach((item, idx) => {
