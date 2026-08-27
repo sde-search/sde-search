@@ -1,0 +1,815 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Radar - OSINT & Map</title>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --card: #131a2b;
+            --border: #2a3b5c;
+            --accent: #00ffcc;
+            --text: #fff;
+            --muted: #8fa3c7;
+            --red: #ff5252;
+            --orange: #ff9800;
+            --yellow: #ffcc00;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--accent);
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .status-panel {
+            background: #1f2d44;
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 900px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status-info {
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--accent);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            width: 100%;
+            max-width: 900px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .card-map {
+            max-width: 1200px;
+            border-color: #b388ff;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        input[type="number"], input[type="text"], input[type="password"] {
+            padding: 9px;
+            background: #131a2b;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        input[type="number"] {
+            width: 110px;
+        }
+
+        input[type="text"], input[type="password"] {
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+        }
+
+        button {
+            padding: 9px 20px;
+            border: none;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+            button:hover {
+                opacity: 0.8;
+            }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            text-align: left;
+        }
+
+        .result-item {
+            background: #1f2d44;
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 4px solid var(--border);
+        }
+
+        .map-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .map-container {
+            position: relative;
+            background: #000;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 1/1;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            image-rendering: pixelated;
+        }
+
+            .map-container canvas {
+                width: 100%;
+                height: 100%;
+                display: block;
+                cursor: grab;
+            }
+
+                .map-container canvas:active {
+                    cursor: grabbing;
+                }
+
+        .map-tooltip {
+            position: absolute;
+            display: none;
+            background: rgba(19, 26, 43, 0.95);
+            border: 1px solid var(--accent);
+            padding: 12px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            white-space: nowrap;
+            text-align: left;
+            min-width: 150px;
+        }
+
+        .map-legend {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1f2d44;
+            padding: 8px 15px;
+            border-radius: 6px;
+            min-width: 200px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        /* --- СТИЛИ АВТОРИЗАЦИИ --- */
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-card {
+            background: var(--card);
+            border: 1px solid var(--accent);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            text-align: center;
+            width: 100%;
+            max-width: 320px;
+            box-sizing: border-box;
+        }
+
+        #mainWrapper {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+    </style>
+
+    <script src="config.js"></script>
+    <script>// ПЕРЕХВАТЧИК FETCH: автоматически добавляет токен Basic Auth ко всем запросам
+        const originalFetch = window.fetch;
+</head>
+<body>
+
+    <!-- ОКНО АВТОРИЗАЦИИ -->
+    <div id="loginOverlay">
+        <div class="login-card">
+            <h2 style="color: var(--accent); margin-top: 0;">🔒 Доступ закрыт</h2>
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Введите данные для доступа к OSINT Радару</p>
+            <input type="text" id="userInput" placeholder="Логин" style="width: 100%; margin-bottom: 10px;">
+            <input type="password" id="passInput" placeholder="Пароль" style="width: 100%; margin-bottom: 15px;" onkeypress="if(event.key === 'Enter') checkAuth()">
+            <button onclick="checkAuth()" style="width: 100%;">Войти</button>
+            <div id="loginError" style="color: var(--red); font-size: 13px; margin-top: 15px; display: none;">❌ Неверный логин или пароль!</div>
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div id="mainWrapper">
+        <h1>🛰️ Внешний радар OSINT</h1>
+
+        <div class="status-panel" id="serverStatusPanel">
+            <div class="status-info">
+                <span style="color: var(--muted);">Подключение к серверу...</span>
+            </div>
+            <button style="padding: 5px 10px; font-size: 12px; background: transparent; border: 1px solid var(--muted); color: var(--muted);" onclick="checkServerStatus()">🔄 Обновить статус</button>
+        </div>
+
+        <div class="card">
+            <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">🎯 Глобальный поиск</h3>
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Поиск систем в заданном радиусе (результаты группируются по игрокам).</p>
+
+            <div class="controls">
+                <input type="number" id="targetX" placeholder="Ось X">
+                <span style="color: var(--muted); font-weight: bold;">:</span>
+                <input type="number" id="targetY" placeholder="Ось Y">
+                <input type="number" id="minDist" placeholder="Слепая зона" title="Не показывать объекты ближе этой дистанции">
+                <input type="number" id="maxDist" placeholder="Радиус (макс)" title="Искать не дальше этой дистанции (оставь пустым для всей галактики)">
+            </div>
+            <div class="controls">
+                <input type="text" id="ignorePlayers" placeholder="Игнорировать игроков (имена через запятую)">
+                <button onclick="searchTargets()">Сканировать сектор</button>
+            </div>
+
+            <div style="margin-bottom: 15px; font-size: 14px; color: var(--accent); font-weight: bold;" id="statsLabel"></div>
+            <div id="targetResults" class="results"></div>
+        </div>
+
+        <div class="card card-map">
+            <h3 style="color: #b388ff; margin-top: 0; font-size: 20px;">🗺️ Тактическая Карта Галактики</h3>
+            <p style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px;">
+                • 1 координата = 1 система. При зуме они вплотную прилегают друг к другу образуя мозаику.<br>
+                • Масштабируйте <b>колесиком мыши</b>, перемещайтесь <b>зажав левую кнопку</b>.
+            </p>
+
+            <div class="controls" style="margin-bottom: 25px;">
+                <input type="text" id="mapPlayerInput" placeholder="Введите точное имя игрока">
+                <button style="background: #b388ff;" onclick="addPlayerToMap()">+ Вывести на карту</button>
+            </div>
+
+            <div class="map-wrapper">
+                <div class="map-container">
+                    <canvas id="galaxyMap" width="800" height="800"></canvas>
+                    <div id="mapTooltip" class="map-tooltip"></div>
+                </div>
+                <div class="map-legend" id="mapLegend"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">📦 Экспорт данных</h3>
+            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+                <a href="#" onclick="downloadFile('/api/download/history', 'bot_history.txt'); return false;" class="btn" style="background: #1f2d44; color: var(--accent); border: 1px solid var(--border); font-size: 13px;">📄 Лог событий (txt)</a>
+                <a href="#" onclick="downloadFile('/api/download/db', 'analytics.db'); return false;" class="btn" style="background: #1f2d44; color: #b388ff; border: 1px solid var(--border); font-size: 13px;">🗄️ База событий (SQLite)</a>
+                <a href="#" onclick="downloadFile('/api/download/intel', 'galaxy_intel.db'); return false;" class="btn" style="background: #1f2d44; color: #ffcc00; border: 1px solid var(--border); font-size: 13px;">🌍 База радара Галактики</a>
+                <a href="#" onclick="downloadFile('/api/download/errors', 'error_log.txt'); return false;" class="btn" style="background: #1f2d44; color: #ff5252; border: 1px solid var(--border); font-size: 13px;">⚠️ Лог ошибок (txt)</a>
+            </div>
+        </div>
+    </div>
+
+    <script>// --- ЛОГИКА АВТОРИЗАЦИИ НА ФРОНТЕНДЕ ---
+        window.onload = () => {
+            if (sessionStorage.getItem('authToken')) {
+                unlockInterface();
+            } else {
+                document.getElementById('loginOverlay').style.display = 'flex';
+            }
+        };
+
+        async function checkAuth() {
+            const user = document.getElementById('userInput').value.trim();
+            const pass = document.getElementById('passInput').value.trim();
+            const token = btoa(user + ':' + pass);
+
+            sessionStorage.setItem('authToken', token);
+
+            const res = await fetch(`${API_BASE_URL}/api/status`);
+            if (res.ok) {
+                document.getElementById('loginError').style.display = 'none';
+                unlockInterface();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+                sessionStorage.removeItem('authToken');
+            }
+        }
+
+        function unlockInterface() {
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('mainWrapper').style.display = 'flex';
+
+            checkServerStatus();
+            drawMap();
+        }
+
+        // --- ФУНКЦИЯ БЕЗОПАСНОГО СКАЧИВАНИЯ ФАЙЛОВ ---
+        async function downloadFile(endpoint, filename) {
+            try {
+                const res = await fetch(`${API_BASE_URL}${endpoint}`);
+                if (!res.ok) throw new Error();
+                const blob = await res.blob();
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch(e) {
+                alert("Ошибка скачивания файла. Проверьте авторизацию.");
+            }
+        }
+
+        // --- ОСНОВНОЙ ФУНКЦИОНАЛ СТРАНИЦЫ ---
+        async function checkServerStatus() {
+            const panel = document.querySelector('#serverStatusPanel .status-info');
+            panel.innerHTML = '<span style="color: var(--muted);">Обновление данных...</span>';
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/status`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                let radarStatus = data.isScannerRunning ? `<strong style="color: var(--accent);">🔄 Сканирование (${data.scannerProgress} / ${data.scannerTotal})</strong>` :
+                                  (!data.scannerEnabled ? `<span style="color: var(--muted);">Выключен</span>` :
+                                  (data.lastScannerError ? `<strong style="color: var(--red);">Ошибка сканирования</strong>` :
+                                  `<strong style="color: var(--yellow);">Спит (по расписанию)</strong>`));
+
+                let dbTime = data.lastRadarTime || data.lastEventTime || "-";
+
+                panel.innerHTML = `
+                    <div style="margin-bottom: 4px;">
+                        <span style="color: var(--muted);">Свежая запись в БД:</span>
+                        <strong style="color: #fff;">${dbTime}</strong>
+                    </div>
+                    <div><span style="color: var(--muted);">Состояние парсера:</span> ${radarStatus}</div>
+                `;
+            } catch (e) { panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>'; }
+        }
+
+        async function searchTargets() {
+            const x = document.getElementById('targetX').value;
+            const y = document.getElementById('targetY').value;
+            const md = document.getElementById('minDist').value || 0;
+            const maxD = document.getElementById('maxDist').value || 0;
+            const ignPlayers = document.getElementById('ignorePlayers').value;
+
+            const resDiv = document.getElementById('targetResults');
+            const statsLabel = document.getElementById('statsLabel');
+
+            if (x === '' || y === '') { resDiv.innerHTML = '<span style="color:var(--red);">Введите координаты X и Y</span>'; statsLabel.innerText = ''; return; }
+            resDiv.innerHTML = '<span style="color:var(--yellow);">Запрос к базе данных...</span>';
+            statsLabel.innerText = '';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data.length === 0) { resDiv.innerHTML = '<span style="color:var(--muted);">В заданном радиусе никого не найдено.</span>'; return; }
+
+                statsLabel.innerText = `Найдено объектов: ${data.length}`;
+
+                const playersGroup = {};
+                data.forEach(t => {
+                    if (!playersGroup[t.PlayerName]) playersGroup[t.PlayerName] = [];
+                    playersGroup[t.PlayerName].push(t);
+                });
+
+                let html = '';
+
+                for (const [playerName, systems] of Object.entries(playersGroup)) {
+                    systems.sort((a, b) => a.Distance - b.Distance);
+
+                    const minDist = systems[0].Distance;
+                    const sysCount = systems.length;
+
+                    let bColor = 'var(--muted)';
+                    if (minDist <= 200) bColor = 'var(--red)';
+                    else if (minDist <= 500) bColor = 'var(--orange)';
+                    else if (minDist <= 1000) bColor = 'var(--yellow)';
+                    else if (minDist <= 2000) bColor = 'var(--accent)';
+
+                    const spoilerId = 'spoiler_' + Math.random().toString(36).substr(2, 9);
+
+                    html += `
+                    <div class="result-item" style="border-left-color: ${bColor}; cursor: pointer; transition: 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="const el = document.getElementById('${spoilerId}'); el.style.display = el.style.display === 'none' ? 'block' : 'none';">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                            <div style="font-size:16px; color:#fff; font-weight:bold;">${playerName}</div>
+                            <div style="color:${bColor}; font-weight:bold; font-size:12px; text-align: right;">от ${Math.round(minDist)} ед.</div>
+                        </div>
+                        <div style="font-size:13px; color:var(--muted);">
+                            Найдено систем: <span style="color:#fff; font-weight:bold;">${sysCount}</span>
+                        </div>
+                        <div style="text-align: center; margin-top: 5px; font-size: 10px; color: #475569;">Кликни, чтобы развернуть ▼</div>
+                    </div>
+
+                    <div id="${spoilerId}" style="display: none; grid-column: 1 / -1; background: #0b0f19; border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 5px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+                        <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--accent); font-size: 14px;">Подробный список объектов (${playerName}):</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
+                    `;
+
+                    systems.forEach(t => {
+                        let sysColor = 'var(--muted)';
+                        if (t.Distance <= 200) sysColor = 'var(--red)';
+                        else if (t.Distance <= 500) sysColor = 'var(--orange)';
+                        else if (t.Distance <= 1000) sysColor = 'var(--yellow)';
+                        else if (t.Distance <= 2000) sysColor = 'var(--accent)';
+
+                        html += `
+                            <div style="background: #131a2b; padding: 10px; border-radius: 6px; border-left: 3px solid ${sysColor};">
+                                <div style="font-size:14px; color:#fff; font-weight:bold; margin-bottom: 3px;">📍 ${t.X}:${t.Y}</div>
+                                <div style="font-size:12px; color:var(--muted);">Дистанция: ${Math.round(t.Distance)} ед.</div>
+                                <div style="font-size:12px; color:var(--muted);">${t.SystemName || 'Без названия'}</div>
+                            </div>
+                        `;
+                    });
+
+                    html += `
+                        </div>
+                    </div>`;
+                }
+
+                resDiv.innerHTML = html;
+            } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; }
+        }
+
+        // --- ЛОГИКА ИНТЕРАКТИВНОЙ КАРТЫ СИСТЕМ ---
+        const mapColors = ['#00ffcc', '#ff5252', '#ff9800', '#b388ff', '#e040fb'];
+        let activeMapPlayers = [];
+
+        const canvas = document.getElementById('galaxyMap');
+        const ctx = canvas.getContext('2d');
+        const mapTooltip = document.getElementById('mapTooltip');
+
+        // ИДЕАЛЬНАЯ МАТЕМАТИКА: 1 координата = 1 клетка
+        let camX = 0;
+        let camY = 0;
+        let zoom = 0.00125;
+
+        let isDragging = false;
+        let lastMouse = { x: 0, y: 0 };
+        let globalCoordMap = new Map();
+
+        const worldToScreen = (wx, wy) => {
+            return {
+                x: (wx - camX) * zoom + canvas.width / 2,
+                y: (camY - wy) * zoom + canvas.height / 2
+            };
+        };
+
+        const screenToWorld = (sx, sy) => {
+            return {
+                x: (sx - canvas.width / 2) / zoom + camX,
+                y: camY - (sy - canvas.height / 2) / zoom
+            };
+        };
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = canvas.getBoundingClientRect();
+            lastMouse = {
+                x: (e.clientX - rect.left) * (canvas.width / rect.width),
+                y: (e.clientY - rect.top) * (canvas.height / rect.height)
+            };
+            canvas.style.cursor = 'grabbing';
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            if (isDragging) {
+                const dx = mouseX - lastMouse.x;
+                const dy = mouseY - lastMouse.y;
+
+                camX -= dx / zoom;
+                camY += dy / zoom;
+
+                lastMouse = { x: mouseX, y: mouseY };
+                drawMap();
+                mapTooltip.style.display = 'none';
+                return;
+            }
+
+            let hoveredCell = null;
+            let minDist = Infinity;
+            let hitRadius = Math.max(5, zoom / 2);
+
+            globalCoordMap.forEach((cell) => {
+                let sc = worldToScreen(cell.x, cell.y);
+                let dist = Math.hypot(mouseX - sc.x, mouseY - sc.y);
+
+                if (dist < hitRadius && dist < minDist) {
+                    minDist = dist;
+                    hoveredCell = cell;
+                }
+            });
+
+            if (hoveredCell) {
+                let playersAtCoord = [...new Set(hoveredCell.items.map(i => i.player))].join(', ');
+                let sysNames = [...new Set(hoveredCell.items.map(i => i.sys).filter(s => s))].join(', ');
+                let sysInfo = sysNames ? ` <span style="color:#8fa3c7; font-weight:normal;">(${sysNames})</span>` : '';
+
+                mapTooltip.innerHTML = `
+                    <div style="color: var(--accent); font-weight: bold; margin-bottom: 8px; font-size: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">📍 Координаты: ${hoveredCell.x}:${hoveredCell.y}${sysInfo}</div>
+                    <div>Игроки: <b style="color: #fff;">${playersAtCoord}</b></div>
+                `;
+
+                mapTooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+                mapTooltip.style.top = (e.clientY - rect.top + 15) + 'px';
+                mapTooltip.style.display = 'block';
+                canvas.style.cursor = 'pointer';
+            } else {
+                mapTooltip.style.display = 'none';
+                canvas.style.cursor = 'grab';
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; mapTooltip.style.display = 'none'; canvas.style.cursor = 'default'; });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            const worldBefore = screenToWorld(mouseX, mouseY);
+
+            const zoomFactor = 1.15;
+            if (e.deltaY < 0) { zoom *= zoomFactor; }
+            else { zoom /= zoomFactor; }
+
+            if (zoom < 0.0001) zoom = 0.0001;
+            if (zoom > 100) zoom = 100;
+
+            const worldAfter = screenToWorld(mouseX, mouseY);
+
+            camX += (worldBefore.x - worldAfter.x);
+            camY += (worldBefore.y - worldAfter.y);
+
+            mapTooltip.style.display = 'none';
+            drawMap();
+        }, { passive: false });
+
+        async function addPlayerToMap() {
+            const input = document.getElementById('mapPlayerInput');
+            const pName = input.value.trim();
+            if(!pName) return;
+            if(activeMapPlayers.length >= 5) { alert('Максимум 5 игроков на карте!'); return; }
+            if(activeMapPlayers.find(p => p.name.toLowerCase() === pName.toLowerCase())) { alert('Игрок уже добавлен.'); return; }
+
+            const btn = input.nextElementSibling;
+            const originalText = btn.innerText;
+            btn.innerText = 'Загрузка...';
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
+                if(!res.ok) return;
+                const data = await res.json();
+
+                if(data.length === 0) { alert(`Объекты игрока "${pName}" не найдены в базе данных.`); btn.innerText = originalText; return; }
+
+                const color = mapColors[activeMapPlayers.length];
+                activeMapPlayers.push({ name: data[0].PlayerName || pName, color: color, tracks: data });
+
+                input.value = '';
+                updateMapLegend();
+                drawMap();
+            } catch(e) {
+                alert('Ошибка соединения при загрузке данных для карты.');
+            } finally {
+                btn.innerText = originalText;
+            }
+        }
+
+        function removePlayerFromMap(index) {
+            activeMapPlayers.splice(index, 1);
+            updateMapLegend();
+            drawMap();
+        }
+
+        function updateMapLegend() {
+            const container = document.getElementById('mapLegend');
+            container.innerHTML = '';
+            activeMapPlayers.forEach((p, i) => {
+                container.innerHTML += `
+                    <div class="legend-item" style="border-left: 3px solid ${p.color}">
+                        <div>
+                            <span class="legend-color" style="background: ${p.color};"></span>
+                            <b style="color:#fff; font-size:14px;">${p.name}</b>
+                            <span style="color:var(--muted); font-size:12px; margin-left:5px;">(${p.tracks.length} шт.)</span>
+                        </div>
+                        <button style="padding: 2px 8px; background: transparent; border: 1px solid var(--red); color: var(--red); cursor: pointer;" onclick="removePlayerFromMap(${i})">✖</button>
+                    </div>
+                `;
+            });
+        }
+
+        function drawMap() {
+            if(!canvas) return;
+            const cw = canvas.width;
+            const ch = canvas.height;
+
+            ctx.clearRect(0, 0, cw, ch);
+
+            // Границы галактики
+            let topC = worldToScreen(0, 480000);
+            let botC = worldToScreen(0, -160000);
+            let leftC = worldToScreen(-320000, 160000);
+            let rightC = worldToScreen(320000, 160000);
+
+            ctx.strokeStyle = '#2a3b5c';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(topC.x, topC.y);
+            ctx.lineTo(rightC.x, rightC.y);
+            ctx.lineTo(botC.x, botC.y);
+            ctx.lineTo(leftC.x, leftC.y);
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.strokeStyle = '#131a2b';
+            ctx.beginPath();
+            ctx.moveTo(topC.x, topC.y); ctx.lineTo(botC.x, botC.y);
+            ctx.moveTo(leftC.x, leftC.y); ctx.lineTo(rightC.x, rightC.y);
+            ctx.stroke();
+
+            // Динамическая сетка
+            if (zoom > 0.05) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+
+                let step = 10000;
+                if (zoom > 0.5) step = 1000;
+                if (zoom > 5) step = 100;
+                if (zoom > 15) step = 1;
+
+                let tlWorld = screenToWorld(0, 0);
+                let brWorld = screenToWorld(cw, ch);
+
+                let startX = Math.floor(Math.min(tlWorld.x, brWorld.x) / step) * step;
+                let endX = Math.ceil(Math.max(tlWorld.x, brWorld.x) / step) * step;
+                let startY = Math.floor(Math.min(tlWorld.y, brWorld.y) / step) * step;
+                let endY = Math.ceil(Math.max(tlWorld.y, brWorld.y) / step) * step;
+
+                for (let x = startX; x <= endX; x += step) {
+                    let p1 = worldToScreen(x, Math.min(tlWorld.y, brWorld.y));
+                    let p2 = worldToScreen(x, Math.max(tlWorld.y, brWorld.y));
+                    ctx.moveTo(Math.round(p1.x)-0.5, p1.y); ctx.lineTo(Math.round(p2.x)-0.5, p2.y);
+                }
+                for (let y = startY; y <= endY; y += step) {
+                    let p1 = worldToScreen(Math.min(tlWorld.x, brWorld.x), y);
+                    let p2 = worldToScreen(Math.max(tlWorld.x, brWorld.x), y);
+                    ctx.moveTo(p1.x, Math.round(p1.y)-0.5); ctx.lineTo(p2.x, Math.round(p2.y)-0.5);
+                }
+                ctx.stroke();
+            }
+
+            let sun = worldToScreen(0, 0);
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath(); ctx.arc(sun.x, sun.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8fa3c7'; ctx.font = `11px Arial`;
+            ctx.fillText('☀️ Sun (0:0)', sun.x + 10, sun.y + 4);
+
+            let bh = worldToScreen(0, 160000);
+            ctx.fillStyle = '#b388ff';
+            ctx.beginPath(); ctx.arc(bh.x, bh.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#8fa3c7';
+            ctx.fillText('🕳️ Blackhole', bh.x + 10, bh.y + 4);
+
+            globalCoordMap.clear();
+            activeMapPlayers.forEach(p => {
+                p.tracks.forEach(t => {
+                    let key = `${t.X}:${t.Y}`;
+                    if (!globalCoordMap.has(key)) {
+                        globalCoordMap.set(key, { x: t.X, y: t.Y, sys: t.SystemName, items: [] });
+                    }
+
+                    let cell = globalCoordMap.get(key);
+                    if (!cell.items.find(i => i.player === p.name)) {
+                        cell.items.push({ player: p.name, color: p.color });
+                    }
+                });
+            });
+
+            globalCoordMap.forEach((cell) => {
+                let sc = worldToScreen(cell.x, cell.y);
+
+                let sizePx = zoom;
+
+                if (sizePx < 6) {
+                    sizePx = 6;
+                }
+
+                let half = sizePx / 2;
+                let tlX = sc.x - half;
+                let tlY = sc.y - half;
+
+                if (tlX > cw || tlX + sizePx < 0 || tlY > ch || tlY + sizePx < 0) return;
+
+                tlX = Math.round(tlX);
+                tlY = Math.round(tlY);
+                let w = Math.ceil(sizePx);
+                let h = Math.ceil(sizePx);
+
+                let count = cell.items.length;
+
+                if (count === 1) {
+                    ctx.fillStyle = cell.items[0].color;
+                    ctx.fillRect(tlX, tlY, w, h);
+
+                    ctx.strokeStyle = '#0b0f19';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(tlX, tlY, w, h);
+                } else if (count === 2) {
+                    let halfW = Math.round(w / 2);
+                    ctx.fillStyle = cell.items[0].color;
+                    ctx.fillRect(tlX, tlY, halfW, h);
+
+                    ctx.fillStyle = cell.items[1].color;
+                    ctx.fillRect(tlX + halfW, tlY, w - halfW, h);
+
+                    ctx.strokeStyle = '#0b0f19';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(tlX, tlY, w, h);
+                    ctx.beginPath(); ctx.moveTo(tlX + halfW, tlY); ctx.lineTo(tlX + halfW, tlY + h); ctx.stroke();
+                } else {
+                    let halfW = Math.round(w / 2);
+                    let halfH = Math.round(h / 2);
+                    let subSizes = [
+                        { dx: 0,     dy: 0,     sw: halfW,     sh: halfH },
+                        { dx: halfW, dy: 0,     sw: w - halfW, sh: halfH },
+                        { dx: 0,     dy: halfH, sw: halfW,     sh: h - halfH },
+                        { dx: halfW, dy: halfH, sw: w - halfW, sh: h - halfH }
+                    ];
+                    cell.items.forEach((item, idx) => {
+                        let sub = subSizes[idx % 4];
+                        ctx.fillStyle = item.color;
+                        ctx.fillRect(tlX + sub.dx, tlY + sub.dy, sub.sw, sub.sh);
+                    });
+
+                    ctx.strokeStyle = '#0b0f19';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(tlX, tlY, w, h);
+                }
+            });
+        }</script>
+</body>
+</html>
