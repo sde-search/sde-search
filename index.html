@@ -113,9 +113,9 @@
             color: var(--bg);
         }
 
-            button:hover {
-                opacity: 0.8;
-            }
+        button:hover {
+            opacity: 0.8;
+        }
 
         .results {
             display: grid;
@@ -151,16 +151,16 @@
             image-rendering: pixelated;
         }
 
-            .map-container canvas {
-                width: 100%;
-                height: 100%;
-                display: block;
-                cursor: grab;
-            }
+        .map-container canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: grab;
+        }
 
-                .map-container canvas:active {
-                    cursor: grabbing;
-                }
+        .map-container canvas:active {
+            cursor: grabbing;
+        }
 
         .map-tooltip {
             position: absolute;
@@ -242,9 +242,23 @@
         }
     </style>
 
+    <!-- Подключаем конфигурацию API_BASE_URL -->
     <script src="config.js"></script>
-    <script>// ПЕРЕХВАТЧИК FETCH: автоматически добавляет токен Basic Auth ко всем запросам
+    
+    <script>
+        // ПЕРЕХВАТЧИК FETCH: автоматически добавляет токен Basic Auth ко всем запросам
         const originalFetch = window.fetch;
+        window.fetch = async function(url, options = {}) {
+            const token = sessionStorage.getItem('authToken');
+            if (token) {
+                // Если заголовков еще нет, создаем объект
+                options.headers = options.headers || {};
+                // Добавляем заголовок Authorization
+                options.headers['Authorization'] = `Basic ${token}`;
+            }
+            return originalFetch(url, options);
+        };
+    </script>
 </head>
 <body>
 
@@ -323,7 +337,8 @@
         </div>
     </div>
 
-    <script>// --- ЛОГИКА АВТОРИЗАЦИИ НА ФРОНТЕНДЕ ---
+    <script>
+        // --- ЛОГИКА АВТОРИЗАЦИИ НА ФРОНТЕНДЕ ---
         window.onload = () => {
             if (sessionStorage.getItem('authToken')) {
                 unlockInterface();
@@ -810,6 +825,7 @@
                     ctx.strokeRect(tlX, tlY, w, h);
                 }
             });
-        }</script>
+        }
+    </script>
 </body>
 </html>
