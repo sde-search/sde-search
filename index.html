@@ -160,7 +160,10 @@
 
             <div style="display: flex; flex-direction: column; gap: 20px;">
                 <div class="card" style="padding: 20px; flex-grow: 1; display: flex; flex-direction: column;">
-                    <h2 style="margin-top:0; font-size:18px; color:var(--accent);">📝 RAW Просмотрщик событий</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h2 style="margin:0; font-size:18px; color:var(--accent);">📝 RAW Просмотрщик событий</h2>
+                        <button onclick="loadFilteredData()" style="padding: 5px 15px; font-size: 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer;">🔄 Обновить логи</button>
+                    </div>
                     <textarea id="rawLogViewer" style="flex-grow: 1; min-height: 700px; width: 100%; background: #0b0f19; color: #00ffcc; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical;" readonly placeholder="Здесь появятся сырые логи после применения фильтров..."></textarea>
                 </div>
             </div>
@@ -458,7 +461,9 @@
                 return;
             }
 
-            if (isRulerMode && rulerStart && !rulerEnd) { drawMap(); }
+            if (isRulerMode && rulerStart && !rulerEnd) {
+                drawMap(); 
+            }
 
             if (!isRulerMode && !isMapHeatmapMode) {
                 let hoveredCell = null;
@@ -594,11 +599,51 @@
                 } else {
                     let sizePx = Math.max(6, zoom);
                     let half = sizePx / 2;
-                    let tlX = Math.round(sc.x - half); let tlY = Math.round(sc.y - half);
-                    
-                    ctx.fillStyle = cell.items[0].color;
-                    ctx.fillRect(tlX, tlY, sizePx, sizePx);
-                    ctx.strokeStyle = '#0b0f19'; ctx.strokeRect(tlX, tlY, sizePx, sizePx);
+                    let tlX = Math.round(sc.x - half); 
+                    let tlY = Math.round(sc.y - half);
+                    let w = Math.ceil(sizePx);
+                    let h = Math.ceil(sizePx);
+
+                    let count = cell.items.length;
+
+                    if (count === 1) {
+                        ctx.fillStyle = cell.items[0].color;
+                        ctx.fillRect(tlX, tlY, w, h);
+
+                        ctx.strokeStyle = '#0b0f19';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(tlX, tlY, w, h);
+                    } else if (count === 2) {
+                        let halfW = Math.round(w / 2);
+                        ctx.fillStyle = cell.items[0].color;
+                        ctx.fillRect(tlX, tlY, halfW, h);
+
+                        ctx.fillStyle = cell.items[1].color;
+                        ctx.fillRect(tlX + halfW, tlY, w - halfW, h);
+
+                        ctx.strokeStyle = '#0b0f19';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(tlX, tlY, w, h);
+                        ctx.beginPath(); ctx.moveTo(tlX + halfW, tlY); ctx.lineTo(tlX + halfW, tlY + h); ctx.stroke();
+                    } else {
+                        let halfW = Math.round(w / 2);
+                        let halfH = Math.round(h / 2);
+                        let subSizes = [
+                            { dx: 0,     dy: 0,     sw: halfW,     sh: halfH },
+                            { dx: halfW, dy: 0,     sw: w - halfW, sh: halfH },
+                            { dx: 0,     dy: halfH, sw: halfW,     sh: h - halfH },
+                            { dx: halfW, dy: halfH, sw: w - halfW, sh: h - halfH }
+                        ];
+                        cell.items.forEach((item, idx) => {
+                            let sub = subSizes[idx % 4];
+                            ctx.fillStyle = item.color;
+                            ctx.fillRect(tlX + sub.dx, tlY + sub.dy, sub.sw, sub.sh);
+                        });
+
+                        ctx.strokeStyle = '#0b0f19';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(tlX, tlY, w, h);
+                    }
                 }
             });
 
@@ -614,8 +659,8 @@
                     let dist = Math.hypot(endPoint.x - rulerStart.x, endPoint.y - rulerStart.y);
                     
                     ctx.fillStyle = 'rgba(11, 15, 25, 0.8)';
-                    ctx.fillRect(sEnd.x + 8, sEnd.y - 20, 100, 22);
-                    ctx.fillStyle = '#ffcc00'; ctx.font = '13px Arial'; ctx.fillText(`📏 ${Math.round(dist)} сис.`, sEnd.x + 12, sEnd.y - 5);
+                    ctx.fillRect(sEnd.x + 8, sEnd.y - 24, 110, 26);
+                    ctx.fillStyle = '#ffcc00'; ctx.font = 'bold 15px Arial'; ctx.fillText(`📏 ${Math.round(dist)} сис.`, sEnd.x + 12, sEnd.y - 6);
                 }
                 ctx.setLineDash([]);
             }
