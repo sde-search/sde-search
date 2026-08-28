@@ -41,7 +41,7 @@
             border-radius: 8px;
             margin-bottom: 20px;
             width: 100%;
-            max-width: 900px;
+            max-width: 1200px;
             box-sizing: border-box;
             display: flex;
             justify-content: space-between;
@@ -50,56 +50,55 @@
             gap: 10px;
         }
 
-        .status-info {
-            font-size: 13px;
-            line-height: 1.5;
+        .header-filters {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 20px;
+            background: var(--card);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            box-sizing: border-box;
         }
+
+        .header-filters > div { display: flex; flex-direction: column; }
+        .header-filters input, .header-filters select { width: 180px; }
+
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            align-items: start;
+        }
+        @media(max-width: 1000px) { .dashboard-layout { grid-template-columns: 1fr; } }
 
         .card {
             background: var(--card);
-            border: 1px solid var(--accent);
-            padding: 30px;
+            border: 1px solid var(--border);
+            padding: 25px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            width: 100%;
-            max-width: 900px;
             box-sizing: border-box;
             margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .card-map {
+            width: 100%;
             max-width: 1200px;
-            border-color: #b388ff;
         }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-
-        input[type="number"], input[type="text"], input[type="password"] {
-            padding: 9px;
-            background: #131a2b;
+        label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 3px; }
+        input, select, textarea {
+            background: #1f2d44;
             color: var(--text);
             border: 1px solid var(--border);
+            padding: 9px;
             border-radius: 6px;
             box-sizing: border-box;
-            text-align: center;
-        }
-
-        input[type="number"] {
-            width: 110px;
-        }
-
-        input[type="text"], input[type="password"] {
-            flex: 1;
-            min-width: 250px;
-            max-width: 400px;
+            font-size: 14px;
         }
 
         button {
@@ -112,31 +111,8 @@
             background: var(--accent);
             color: var(--bg);
         }
-
-        button:hover {
-            opacity: 0.8;
-        }
-
-        .results {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-            text-align: left;
-        }
-
-        .result-item {
-            background: #1f2d44;
-            padding: 10px;
-            border-radius: 6px;
-            border-left: 4px solid var(--border);
-        }
-
-        .map-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
+        button:hover { opacity: 0.8; }
+        .btn-active { background: var(--yellow) !important; color: #000 !important; }
 
         .map-container {
             position: relative;
@@ -144,129 +120,82 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             width: 100%;
-            max-width: 800px;
             aspect-ratio: 1/1;
             overflow: hidden;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
             image-rendering: pixelated;
         }
-
-        .map-container canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            cursor: grab;
-        }
-
-        .map-container canvas:active {
-            cursor: grabbing;
-        }
+        .map-container canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+        .map-container canvas:active { cursor: grabbing; }
 
         .map-tooltip {
-            position: absolute;
-            display: none;
-            background: rgba(19, 26, 43, 0.95);
-            border: 1px solid var(--accent);
-            padding: 12px;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 13px;
-            pointer-events: none;
-            z-index: 100;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-            white-space: nowrap;
-            text-align: left;
-            min-width: 150px;
+            position: absolute; display: none; background: rgba(19, 26, 43, 0.95);
+            border: 1px solid var(--accent); padding: 12px; border-radius: 8px;
+            color: #fff; font-size: 13px; pointer-events: none; z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6); white-space: nowrap;
         }
 
-        .map-legend {
-            margin-top: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-            width: 100%;
-        }
+        table { border-collapse: collapse; width: 100%; background: var(--card); }
+        th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; font-size: 13px; }
+        th { background: #1f2d44; color: var(--accent); position: sticky; top: 0; }
+        tr:hover { background: #1a253a; }
+        .table-container { max-height: 400px; overflow-y: auto; border-radius: 6px; border: 1px solid var(--border); }
 
-        .legend-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #1f2d44;
-            padding: 8px 15px;
-            border-radius: 6px;
-            min-width: 200px;
-        }
+        /* Матрица активности */
+        .heatmap-container { overflow-x: auto; margin-top: 15px; border-radius: 6px; border: 1px solid var(--border); }
+        .heatmap-table { border-collapse: collapse; width: 100%; min-width: 700px; }
+        .heatmap-table th, .heatmap-table td { border: 1px solid var(--border); padding: 8px 4px; text-align: center; min-width: 32px; font-size: 12px; }
+        .heatmap-table th { background: #1f2d44; color: var(--muted); font-weight: normal; }
+        .heatmap-cell { cursor: default; transition: 0.15s; border-radius: 3px; }
+        .heatmap-cell:hover { transform: scale(1.15); z-index: 10; position: relative; box-shadow: 0 0 8px rgba(0,255,204,0.7); }
+        .day-label { background: #1f2d44; color: var(--accent); text-align: left !important; padding-left: 10px !important; font-weight: bold; width: 50px; }
 
-        .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
+        /* Авторизация */
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .login-card { background: var(--card); border: 1px solid var(--accent); padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); text-align: center; width: 100%; max-width: 320px; box-sizing: border-box; }
+        #mainWrapper { display: none; flex-direction: column; align-items: center; width: 100%; }
 
-        /* --- СТИЛИ АВТОРИЗАЦИИ --- */
-        #loginOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .login-card {
-            background: var(--card);
-            border: 1px solid var(--accent);
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
-            text-align: center;
-            width: 100%;
-            max-width: 320px;
-            box-sizing: border-box;
-        }
-
-        #mainWrapper {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
+        .tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .tag-Constructed { background: #004d40; color: #64ffda; }
+        .tag-Destroy-Ship { background: #880e4f; color: #f8bbd0; }
+        .tag-Lost-Ship { background: #5c0011; color: #ff8a80; }
+        .tag-Invasion { background: #e65100; color: #ffe0b2; }
+        .tag-Under-Attack { background: #bf360c; color: #ffab91; }
+        .tag-Captured-System { background: #01579b; color: #b3e5fc; }
+        .tag-Lost-Control { background: #455a64; color: #b0bec5; }
+        .tag-Captured-Ship { background: #33691e; color: #dcedc8; }
+        .tag-Stolen-Ship { background: #827717; color: #f0f4c3; }
+        .tag-Transaction { background: #311b92; color: #b388ff; }
+        .tag-Self-Destructed { background: #b71c1c; color: #ff8a80; }
+        .tag-Default { background: #37474f; color: #cfd8dc; }
     </style>
 
-    <!-- Подключаем конфигурацию API_BASE_URL -->
     <script src="config.js"></script>
-    
     <script>
-        // ПЕРЕХВАТЧИК FETCH: автоматически добавляет токен Basic Auth ко всем запросам
         const originalFetch = window.fetch;
-        window.fetch = async function(url, options = {}) {
+        window.fetch = async function() {
+            let [resource, config] = arguments;
+            if (!config) config = {};
+            if (!config.headers) config.headers = {};
             const token = sessionStorage.getItem('authToken');
-            if (token) {
-                // Если заголовков еще нет, создаем объект
-                options.headers = options.headers || {};
-                // Добавляем заголовок Authorization
-                options.headers['Authorization'] = `Basic ${token}`;
+            if (token) config.headers['Authorization'] = 'Basic ' + token;
+            
+            let response = await originalFetch(resource, config);
+            if (response.status === 401) {
+                document.getElementById('loginOverlay').style.display = 'flex';
+                document.getElementById('mainWrapper').style.display = 'none';
+                sessionStorage.removeItem('authToken');
             }
-            return originalFetch(url, options);
+            return response;
         };
     </script>
 </head>
 <body>
 
-    <!-- ОКНО АВТОРИЗАЦИИ -->
     <div id="loginOverlay">
         <div class="login-card">
             <h2 style="color: var(--accent); margin-top: 0;">🔒 Доступ закрыт</h2>
-            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Введите данные для доступа к OSINT Радару</p>
+            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Введите данные для доступа</p>
             <input type="text" id="userInput" placeholder="Логин" style="width: 100%; margin-bottom: 10px;">
             <input type="password" id="passInput" placeholder="Пароль" style="width: 100%; margin-bottom: 15px;" onkeypress="if(event.key === 'Enter') checkAuth()">
             <button onclick="checkAuth()" style="width: 100%;">Войти</button>
@@ -274,84 +203,102 @@
         </div>
     </div>
 
-    <!-- ОСНОВНОЙ КОНТЕНТ -->
     <div id="mainWrapper">
-        <h1>🛰️ Внешний радар OSINT</h1>
+        <h1>🛰️ Stardust Intelligence Deep Audit</h1>
 
         <div class="status-panel" id="serverStatusPanel">
-            <div class="status-info">
-                <span style="color: var(--muted);">Подключение к серверу...</span>
-            </div>
+            <div class="status-info"><span style="color: var(--muted);">Подключение к серверу...</span></div>
             <button style="padding: 5px 10px; font-size: 12px; background: transparent; border: 1px solid var(--muted); color: var(--muted);" onclick="checkServerStatus()">🔄 Обновить статус</button>
         </div>
 
-        <div class="card">
-            <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">🎯 Глобальный поиск</h3>
-            <p style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Поиск систем в заданном радиусе (результаты группируются по игрокам).</p>
-
-            <div class="controls">
-                <input type="number" id="targetX" placeholder="Ось X">
-                <span style="color: var(--muted); font-weight: bold;">:</span>
-                <input type="number" id="targetY" placeholder="Ось Y">
-                <input type="number" id="minDist" placeholder="Слепая зона" title="Не показывать объекты ближе этой дистанции">
-                <input type="number" id="maxDist" placeholder="Радиус (макс)" title="Искать не дальше этой дистанции (оставь пустым для всей галактики)">
+        <div class="header-filters">
+            <div><label>С даты:</label><input type="date" id="startDate"></div>
+            <div><label>По дату:</label><input type="date" id="endDate"></div>
+            <div><label>Игрок:</label><select id="playerSelect"><option value="ALL">-- Все --</option></select></div>
+            <div>
+                <label>Событие:</label>
+                <select id="eventTypeSelect">
+                    <option value="ALL">-- Все --</option>
+                    <option value="Constructed">Constructed</option>
+                    <option value="Destroy Ship">Destroy Ship</option>
+                    <option value="Lost Ship">Lost Ship</option>
+                    <option value="Captured Ship">Captured Ship</option>
+                    <option value="Stolen Ship">Stolen Ship</option>
+                    <option value="Self-Destructed">Self-Destructed</option>
+                    <option value="Invasion">Invasion</option>
+                    <option value="Under Attack">Under Attack</option>
+                    <option value="Captured System">Captured System</option>
+                    <option value="Lost Control">Lost Control</option>
+                </select>
             </div>
-            <div class="controls">
-                <input type="text" id="ignorePlayers" placeholder="Игнорировать игроков (имена через запятую)">
-                <button onclick="searchTargets()">Сканировать сектор</button>
-            </div>
-
-            <div style="margin-bottom: 15px; font-size: 14px; color: var(--accent); font-weight: bold;" id="statsLabel"></div>
-            <div id="targetResults" class="results"></div>
+            <button onclick="loadFilteredData()" style="height: 38px;">🔍 Применить фильтры</button>
         </div>
 
-        <div class="card card-map">
-            <h3 style="color: #b388ff; margin-top: 0; font-size: 20px;">🗺️ Тактическая Карта Галактики</h3>
-            <p style="font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 20px;">
-                • 1 координата = 1 система. При зуме они вплотную прилегают друг к другу образуя мозаику.<br>
-                • Масштабируйте <b>колесиком мыши</b>, перемещайтесь <b>зажав левую кнопку</b>.
-            </p>
-
-            <div class="controls" style="margin-bottom: 25px;">
-                <input type="text" id="mapPlayerInput" placeholder="Введите точное имя игрока">
-                <button style="background: #b388ff;" onclick="addPlayerToMap()">+ Вывести на карту</button>
+        <div class="card">
+            <h2 style="margin-top:0; font-size:18px; color:var(--accent);">🔥 Матрица активности (Тепловая карта)</h2>
+            <div id="heatmapContainer" class="heatmap-container">
+                <div style="text-align:center; padding: 20px; color: var(--muted);">Нажмите "Применить фильтры" для загрузки матрицы...</div>
             </div>
+        </div>
 
-            <div class="map-wrapper">
+        <div class="dashboard-layout">
+            <div class="card" style="border-color: #b388ff;">
+                <h3 style="color: #b388ff; margin-top: 0; font-size: 18px;">🗺️ Тактическая Карта Галактики</h3>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <input type="text" id="mapPlayerInput" placeholder="Точное имя игрока" style="flex:1;">
+                    <button style="background: #b388ff;" onclick="addPlayerToMap()">+ На карту</button>
+                    <button id="btnRuler" onclick="toggleRuler()" style="background: #1f2d44; border: 1px solid #ffcc00; color: #ffcc00;">📏 Линейка</button>
+                    <button id="btnMapHeatmap" onclick="toggleMapHeatmap()" style="background: #1f2d44; border: 1px solid var(--red); color: var(--red);">🔥 Плотность</button>
+                </div>
+
                 <div class="map-container">
                     <canvas id="galaxyMap" width="800" height="800"></canvas>
                     <div id="mapTooltip" class="map-tooltip"></div>
                 </div>
-                <div class="map-legend" id="mapLegend"></div>
+                <div id="mapLegend" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;"></div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="card" style="border-color: #ff5252; padding: 20px;">
+                    <h2 style="margin-top:0; font-size:16px; color:#ff5252;">🔔 Настройки уведомлений (Push Ntfy)</h2>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label style="display:flex; align-items:center; gap:5px; color:var(--text);"><input type="checkbox" id="cfgNtfySystem" style="width:auto; margin:0;"> Системные (Старт/Стоп)</label>
+                        <label style="display:flex; align-items:center; gap:5px; color:var(--text);"><input type="checkbox" id="cfgNtfyLog" style="width:auto; margin:0;"> События логов (Атаки)</label>
+                        <label style="display:flex; align-items:center; gap:5px; color:var(--text);"><input type="checkbox" id="cfgNtfyRadar" style="width:auto; margin:0;"> Радар (Враги у баз)</label>
+                        <label style="display:flex; align-items:center; gap:5px; color:var(--text);"><input type="checkbox" id="cfgNtfySector" style="width:auto; margin:0;"> Сектор (Координаты)</label>
+                    </div>
+                    <button class="btn" onclick="saveNtfyConfig()" style="margin-top: 15px; width: 100%; background: #ff5252;">💾 Сохранить флаги</button>
+                </div>
+
+                <div class="card" style="padding: 20px;">
+                    <h2 style="margin-top:0; font-size:18px; color:var(--accent);">📝 RAW Просмотрщик событий</h2>
+                    <textarea id="rawLogViewer" style="width: 100%; height: 350px; background: #0b0f19; color: #00ffcc; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical;" readonly placeholder="Здесь появятся сырые логи после применения фильтров..."></textarea>
+                </div>
             </div>
         </div>
 
         <div class="card">
-            <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">📦 Экспорт данных</h3>
-            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-                <a href="#" onclick="downloadFile('/api/download/history', 'bot_history.txt'); return false;" class="btn" style="background: #1f2d44; color: var(--accent); border: 1px solid var(--border); font-size: 13px;">📄 Лог событий (txt)</a>
-                <a href="#" onclick="downloadFile('/api/download/db', 'analytics.db'); return false;" class="btn" style="background: #1f2d44; color: #b388ff; border: 1px solid var(--border); font-size: 13px;">🗄️ База событий (SQLite)</a>
-                <a href="#" onclick="downloadFile('/api/download/intel', 'galaxy_intel.db'); return false;" class="btn" style="background: #1f2d44; color: #ffcc00; border: 1px solid var(--border); font-size: 13px;">🌍 База радара Галактики</a>
-                <a href="#" onclick="downloadFile('/api/download/errors', 'error_log.txt'); return false;" class="btn" style="background: #1f2d44; color: #ff5252; border: 1px solid var(--border); font-size: 13px;">⚠️ Лог ошибок (txt)</a>
+            <h2 style="margin-top:0; font-size:18px; color:var(--accent);">📜 Архив логов (Таблица)</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Дата (UTC)</th><th>Время</th><th>День недели</th><th>Событие</th><th>Игрок</th><th>Координаты</th><th>Детали</th></tr>
+                    </thead>
+                    <tbody id="logTableBody"><tr><td colspan="7" style="text-align:center;">Ожидание...</td></tr></tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script>
-        // --- ЛОГИКА АВТОРИЗАЦИИ НА ФРОНТЕНДЕ ---
-        window.onload = () => {
-            if (sessionStorage.getItem('authToken')) {
-                unlockInterface();
-            } else {
-                document.getElementById('loginOverlay').style.display = 'flex';
-            }
-        };
+        const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thursday': 'Чт', 'Friday': 'Пт', 'Saturday': 'Сб', 'Sunday': 'Вс' };
+        let isInitialized = false;
 
         async function checkAuth() {
             const user = document.getElementById('userInput').value.trim();
             const pass = document.getElementById('passInput').value.trim();
             const token = btoa(user + ':' + pass);
-
             sessionStorage.setItem('authToken', token);
 
             const res = await fetch(`${API_BASE_URL}/api/status`);
@@ -367,257 +314,290 @@
         function unlockInterface() {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainWrapper').style.display = 'flex';
-
-            checkServerStatus();
-            drawMap();
-        }
-
-        // --- ФУНКЦИЯ БЕЗОПАСНОГО СКАЧИВАНИЯ ФАЙЛОВ ---
-        async function downloadFile(endpoint, filename) {
-            try {
-                const res = await fetch(`${API_BASE_URL}${endpoint}`);
-                if (!res.ok) throw new Error();
-                const blob = await res.blob();
-                const link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch(e) {
-                alert("Ошибка скачивания файла. Проверьте авторизацию.");
+            if (!isInitialized) {
+                init();
+                isInitialized = true;
             }
         }
 
-        // --- ОСНОВНОЙ ФУНКЦИОНАЛ СТРАНИЦЫ ---
+        async function init() {
+            const today = new Date().toISOString().split('T')[0];
+            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('startDate').value = localStorage.getItem('spy_startDate') || thirtyDaysAgo;
+            document.getElementById('endDate').value = localStorage.getItem('spy_endDate') || today;
+
+            const savedType = localStorage.getItem('spy_eventType');
+            if(savedType) document.getElementById('eventTypeSelect').value = savedType;
+
+            await loadSystemInfo();
+            await loadPlayersList();
+
+            const savedPlayer = localStorage.getItem('spy_player');
+            if(savedPlayer) document.getElementById('playerSelect').value = savedPlayer;
+
+            checkServerStatus();
+            loadFilteredData();
+            drawMap();
+            setInterval(checkServerStatus, 5000);
+        }
+
         async function checkServerStatus() {
             const panel = document.querySelector('#serverStatusPanel .status-info');
-            panel.innerHTML = '<span style="color: var(--muted);">Обновление данных...</span>';
             try {
                 const res = await fetch(`${API_BASE_URL}/api/status`);
                 if (!res.ok) return;
                 const data = await res.json();
-
-                let radarStatus = data.isScannerRunning ? `<strong style="color: var(--accent);">🔄 Сканирование (${data.scannerProgress} / ${data.scannerTotal})</strong>` :
-                                  (!data.scannerEnabled ? `<span style="color: var(--muted);">Выключен</span>` :
-                                  (data.lastScannerError ? `<strong style="color: var(--red);">Ошибка сканирования</strong>` :
-                                  `<strong style="color: var(--yellow);">Спит (по расписанию)</strong>`));
-
+                
                 let dbTime = data.lastRadarTime || data.lastEventTime || "-";
-
+                let radarStatus = data.isScannerRunning ? `<strong style="color: #b388ff;">🔄 Сканирование (${data.scannerProgress}/${data.scannerTotal})</strong>` : `<strong style="color: var(--muted);">Спит</strong>`;
+                
                 panel.innerHTML = `
-                    <div style="margin-bottom: 4px;">
-                        <span style="color: var(--muted);">Свежая запись в БД:</span>
-                        <strong style="color: #fff;">${dbTime}</strong>
-                    </div>
-                    <div><span style="color: var(--muted);">Состояние парсера:</span> ${radarStatus}</div>
+                    <div style="margin-bottom: 4px;"><span style="color: var(--muted);">Свежая запись:</span> <strong style="color: #fff;">${dbTime}</strong></div>
+                    <div><span style="color: var(--muted);">Радар:</span> ${radarStatus} | <span style="color: var(--muted);">Шпион логов:</span> ${data.spyActive ? '<strong style="color:#00ffcc;">Активен</strong>' : '<strong style="color:var(--red);">Остановлен</strong>'}</div>
                 `;
             } catch (e) { panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>'; }
         }
 
-        async function searchTargets() {
-            const x = document.getElementById('targetX').value;
-            const y = document.getElementById('targetY').value;
-            const md = document.getElementById('minDist').value || 0;
-            const maxD = document.getElementById('maxDist').value || 0;
-            const ignPlayers = document.getElementById('ignorePlayers').value;
-
-            const resDiv = document.getElementById('targetResults');
-            const statsLabel = document.getElementById('statsLabel');
-
-            if (x === '' || y === '') { resDiv.innerHTML = '<span style="color:var(--red);">Введите координаты X и Y</span>'; statsLabel.innerText = ''; return; }
-            resDiv.innerHTML = '<span style="color:var(--yellow);">Запрос к базе данных...</span>';
-            statsLabel.innerText = '';
-
+        async function loadSystemInfo() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
+                const res = await fetch(`${API_BASE_URL}/api/info`); 
                 if (!res.ok) return;
-                const data = await res.json();
-
-                if (data.length === 0) { resDiv.innerHTML = '<span style="color:var(--muted);">В заданном радиусе никого не найдено.</span>'; return; }
-
-                statsLabel.innerText = `Найдено объектов: ${data.length}`;
-
-                const playersGroup = {};
-                data.forEach(t => {
-                    if (!playersGroup[t.PlayerName]) playersGroup[t.PlayerName] = [];
-                    playersGroup[t.PlayerName].push(t);
-                });
-
-                let html = '';
-
-                for (const [playerName, systems] of Object.entries(playersGroup)) {
-                    systems.sort((a, b) => a.Distance - b.Distance);
-
-                    const minDist = systems[0].Distance;
-                    const sysCount = systems.length;
-
-                    let bColor = 'var(--muted)';
-                    if (minDist <= 200) bColor = 'var(--red)';
-                    else if (minDist <= 500) bColor = 'var(--orange)';
-                    else if (minDist <= 1000) bColor = 'var(--yellow)';
-                    else if (minDist <= 2000) bColor = 'var(--accent)';
-
-                    const spoilerId = 'spoiler_' + Math.random().toString(36).substr(2, 9);
-
-                    html += `
-                    <div class="result-item" style="border-left-color: ${bColor}; cursor: pointer; transition: 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" onclick="const el = document.getElementById('${spoilerId}'); el.style.display = el.style.display === 'none' ? 'block' : 'none';">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
-                            <div style="font-size:16px; color:#fff; font-weight:bold;">${playerName}</div>
-                            <div style="color:${bColor}; font-weight:bold; font-size:12px; text-align: right;">от ${Math.round(minDist)} ед.</div>
-                        </div>
-                        <div style="font-size:13px; color:var(--muted);">
-                            Найдено систем: <span style="color:#fff; font-weight:bold;">${sysCount}</span>
-                        </div>
-                        <div style="text-align: center; margin-top: 5px; font-size: 10px; color: #475569;">Кликни, чтобы развернуть ▼</div>
-                    </div>
-
-                    <div id="${spoilerId}" style="display: none; grid-column: 1 / -1; background: #0b0f19; border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 5px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
-                        <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--accent); font-size: 14px;">Подробный список объектов (${playerName}):</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
-                    `;
-
-                    systems.forEach(t => {
-                        let sysColor = 'var(--muted)';
-                        if (t.Distance <= 200) sysColor = 'var(--red)';
-                        else if (t.Distance <= 500) sysColor = 'var(--orange)';
-                        else if (t.Distance <= 1000) sysColor = 'var(--yellow)';
-                        else if (t.Distance <= 2000) sysColor = 'var(--accent)';
-
-                        html += `
-                            <div style="background: #131a2b; padding: 10px; border-radius: 6px; border-left: 3px solid ${sysColor};">
-                                <div style="font-size:14px; color:#fff; font-weight:bold; margin-bottom: 3px;">📍 ${t.X}:${t.Y}</div>
-                                <div style="font-size:12px; color:var(--muted);">Дистанция: ${Math.round(t.Distance)} ед.</div>
-                                <div style="font-size:12px; color:var(--muted);">${t.SystemName || 'Без названия'}</div>
-                            </div>
-                        `;
-                    });
-
-                    html += `
-                        </div>
-                    </div>`;
-                }
-
-                resDiv.innerHTML = html;
-            } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; }
+                const info = await res.json();
+                
+                document.getElementById('cfgNtfySystem').checked = info.ntfySystemEnabled !== false;
+                document.getElementById('cfgNtfyLog').checked = info.ntfyLogEnabled !== false;
+                document.getElementById('cfgNtfyRadar').checked = info.ntfyRadarEnabled !== false;
+                document.getElementById('cfgNtfySector').checked = info.ntfySectorEnabled !== false;
+                
+                window.systemConfigCache = info; 
+            } catch(e) { }
         }
 
-        // --- ЛОГИКА ИНТЕРАКТИВНОЙ КАРТЫ СИСТЕМ ---
-        const mapColors = ['#00ffcc', '#ff5252', '#ff9800', '#b388ff', '#e040fb'];
+        async function saveNtfyConfig() {
+            if (!window.systemConfigCache) return;
+            const body = { ...window.systemConfigCache };
+            body.ntfySystemEnabled = document.getElementById('cfgNtfySystem').checked;
+            body.ntfyLogEnabled = document.getElementById('cfgNtfyLog').checked;
+            body.ntfyRadarEnabled = document.getElementById('cfgNtfyRadar').checked;
+            body.ntfySectorEnabled = document.getElementById('cfgNtfySector').checked;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                if(res.ok) alert('✅ Настройки уведомлений сохранены!');
+                else alert('❌ Ошибка сохранения.');
+            } catch(e) { alert('❌ Ошибка сети.'); }
+        }
+
+        async function loadPlayersList() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/players`); 
+                if (!res.ok) return;
+                const players = await res.json();
+                const select = document.getElementById('playerSelect');
+                select.innerHTML = '<option value="ALL">-- Все игроки --</option>';
+                players.forEach(p => { const opt = document.createElement('option'); opt.value = p; opt.textContent = p; select.appendChild(opt); });
+            } catch(e) { }
+        }
+
+        async function loadFilteredData() {
+            const start = document.getElementById('startDate').value; 
+            const end = document.getElementById('endDate').value;
+            const player = document.getElementById('playerSelect').value; 
+            const type = document.getElementById('eventTypeSelect').value;
+            
+            localStorage.setItem('spy_startDate', start); localStorage.setItem('spy_endDate', end);
+            localStorage.setItem('spy_player', player); localStorage.setItem('spy_eventType', type);
+
+            loadMatrix(start, end, player, type);
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/events?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                // Рендер таблицы
+                const tbody = document.getElementById('logTableBody');
+                if(!data.events || data.events.length === 0) { 
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--muted);">Событий не найдено.</td></tr>'; 
+                    document.getElementById('rawLogViewer').value = "Событий не найдено.";
+                    return; 
+                }
+                
+                let html = '';
+                let rawText = '';
+                data.events.forEach(ev => {
+                    let tagClass = 'tag-Default';
+                    if(ev.EventType === 'Constructed') tagClass = 'tag-Constructed'; else if(ev.EventType === 'Transaction') tagClass = 'tag-Transaction'; else if(ev.EventType === 'Self-Destructed') tagClass = 'tag-Self-Destructed'; else if(ev.EventType === 'Destroy Ship') tagClass = 'tag-Destroy-Ship'; else if(ev.EventType === 'Lost Ship') tagClass = 'tag-Lost-Ship'; else if(ev.EventType === 'Invasion') tagClass = 'tag-Invasion'; else if(ev.EventType === 'Under Attack') tagClass = 'tag-Under-Attack'; else if(ev.EventType === 'Captured System' || ev.EventType === 'Control') tagClass = 'tag-Captured-System'; else if(ev.EventType === 'Lost Control') tagClass = 'tag-Lost-Control'; else if(ev.EventType === 'Captured Ship') tagClass = 'tag-Captured-Ship'; else if(ev.EventType === 'Stolen Ship') tagClass = 'tag-Stolen-Ship'; else if(ev.EventType === 'Bounty Payment') tagClass = 'tag-Bounty';
+                    
+                    html += `<tr><td>${ev.EventDate}</td><td><b>${ev.TimeOnly}</b></td><td style="color: var(--yellow);">${daysRu[ev.DayOfWeek] || ev.DayOfWeek}</td><td><span class="tag ${tagClass}">${ev.EventType}</span></td><td style="font-weight: bold; color: var(--accent);">${ev.PlayerName}</td><td style="color: #00ffcc;">${ev.Coordinates}</td><td>${ev.Details}</td></tr>`;
+                    
+                    rawText += `[${ev.EventDate} ${ev.TimeOnly}] [${ev.EventType}] ${ev.PlayerName} | ${ev.Coordinates} | ${ev.Details}\n`;
+                });
+                tbody.innerHTML = html;
+                document.getElementById('rawLogViewer').value = rawText;
+                
+            } catch(e) { }
+        }
+
+        async function loadMatrix(start, end, player, type) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/matrix?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`); 
+                if(!res.ok) return;
+                const matrixData = await res.json(); 
+                
+                const container = document.getElementById('heatmapContainer'); 
+                let html = `<table class="heatmap-table"><thead><tr><th style="width:50px;">День</th>`; 
+                for(let i=0;i<24;i++) html += `<th>${i}:00</th>`; 
+                html += '</tr></thead><tbody>'; 
+                
+                const daysOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']; 
+                let maxVal = 0; 
+                for(const day in matrixData) { for(let i=0;i<24;i++) if(matrixData[day][i] > maxVal) maxVal = matrixData[day][i]; } 
+                
+                daysOrder.forEach(day => {
+                    html += `<tr><td class="day-label">${daysRu[day]}</td>`; 
+                    for(let i=0;i<24;i++){
+                        const val = matrixData[day] && matrixData[day][i] ? matrixData[day][i] : 0; 
+                        let bgColor = 'var(--card)'; 
+                        if(val > 0) {
+                            const intensity = Math.max(0.2, val / maxVal); 
+                            bgColor = `rgba(0, 255, 204, ${intensity})`;
+                        } 
+                        html += `<td class="heatmap-cell" style="background-color: ${bgColor};" title="Событий: ${val}"></td>`;
+                    } 
+                    html += '</tr>';
+                }); 
+                html += '</tbody></table>'; 
+                html += `<div style="margin-top: 15px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 12px; color: var(--muted);"><span>Активность:</span><span style="display:inline-block; width: 14px; height: 14px; background: var(--card); border: 1px solid var(--border);"></span> <span style="margin-right: 10px;">Нет</span><span style="display:inline-block; width: 14px; height: 14px; background: rgba(0, 255, 204, 0.2);"></span> <span style="margin-right: 5px;">Меньше</span><span style="display:inline-block; width: 30px; height: 14px; background: linear-gradient(90deg, rgba(0,255,204,0.2) 0%, rgba(0,255,204,1) 100%);"></span><span style="display:inline-block; width: 14px; height: 14px; background: rgba(0, 255, 204, 1);"></span> <span>Больше</span></div>`; 
+                container.innerHTML = html;
+            } catch(e) {}
+        }
+
+        // --- ЛОГИКА КАРТЫ (Линейка + Тепловой Слой) ---
+        const mapColors = ['#00ffcc', '#ff5252', '#ff9800', '#4caf50', '#e040fb', '#03a9f4'];
         let activeMapPlayers = [];
+        let globalCoordMap = new Map();
 
         const canvas = document.getElementById('galaxyMap');
         const ctx = canvas.getContext('2d');
         const mapTooltip = document.getElementById('mapTooltip');
 
-        // ИДЕАЛЬНАЯ МАТЕМАТИКА: 1 координата = 1 клетка
-        let camX = 0;
-        let camY = 0;
-        let zoom = 0.00125;
-
-        let isDragging = false;
+        let camX = 0; let camY = 0; let zoom = 0.00125;
+        let isDragging = false; let wasDragged = false;
         let lastMouse = { x: 0, y: 0 };
-        let globalCoordMap = new Map();
+        let currentMouseWorld = null;
 
-        const worldToScreen = (wx, wy) => {
-            return {
-                x: (wx - camX) * zoom + canvas.width / 2,
-                y: (camY - wy) * zoom + canvas.height / 2
-            };
-        };
+        // Режимы
+        let isRulerMode = false;
+        let rulerStart = null;
+        let rulerEnd = null;
+        let isMapHeatmapMode = false;
 
-        const screenToWorld = (sx, sy) => {
-            return {
-                x: (sx - canvas.width / 2) / zoom + camX,
-                y: camY - (sy - canvas.height / 2) / zoom
-            };
-        };
+        const worldToScreen = (wx, wy) => ({ x: (wx - camX) * zoom + canvas.width / 2, y: (camY - wy) * zoom + canvas.height / 2 });
+        const screenToWorld = (sx, sy) => ({ x: (sx - canvas.width / 2) / zoom + camX, y: camY - (sy - canvas.height / 2) / zoom });
+
+        function toggleRuler() {
+            isRulerMode = !isRulerMode;
+            const btn = document.getElementById('btnRuler');
+            if(isRulerMode) {
+                btn.classList.add('btn-active');
+                rulerStart = null; rulerEnd = null;
+                canvas.style.cursor = 'crosshair';
+            } else {
+                btn.classList.remove('btn-active');
+                rulerStart = null; rulerEnd = null;
+                canvas.style.cursor = 'grab';
+            }
+            drawMap();
+        }
+
+        function toggleMapHeatmap() {
+            isMapHeatmapMode = !isMapHeatmapMode;
+            const btn = document.getElementById('btnMapHeatmap');
+            if(isMapHeatmapMode) btn.classList.add('btn-active');
+            else btn.classList.remove('btn-active');
+            drawMap();
+        }
 
         canvas.addEventListener('mousedown', (e) => {
-            isDragging = true;
+            isDragging = true; wasDragged = false;
             const rect = canvas.getBoundingClientRect();
-            lastMouse = {
-                x: (e.clientX - rect.left) * (canvas.width / rect.width),
-                y: (e.clientY - rect.top) * (canvas.height / rect.height)
-            };
-            canvas.style.cursor = 'grabbing';
+            lastMouse = { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) };
+            if(!isRulerMode) canvas.style.cursor = 'grabbing';
         });
 
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            currentMouseWorld = screenToWorld(mouseX, mouseY);
 
             if (isDragging) {
                 const dx = mouseX - lastMouse.x;
                 const dy = mouseY - lastMouse.y;
+                if(Math.abs(dx) > 3 || Math.abs(dy) > 3) wasDragged = true;
 
-                camX -= dx / zoom;
-                camY += dy / zoom;
-
+                camX -= dx / zoom; camY += dy / zoom;
                 lastMouse = { x: mouseX, y: mouseY };
-                drawMap();
                 mapTooltip.style.display = 'none';
+                drawMap();
                 return;
             }
 
-            let hoveredCell = null;
-            let minDist = Infinity;
-            let hitRadius = Math.max(5, zoom / 2);
-
-            globalCoordMap.forEach((cell) => {
-                let sc = worldToScreen(cell.x, cell.y);
-                let dist = Math.hypot(mouseX - sc.x, mouseY - sc.y);
-
-                if (dist < hitRadius && dist < minDist) {
-                    minDist = dist;
-                    hoveredCell = cell;
-                }
-            });
-
-            if (hoveredCell) {
-                let playersAtCoord = [...new Set(hoveredCell.items.map(i => i.player))].join(', ');
-                let sysNames = [...new Set(hoveredCell.items.map(i => i.sys).filter(s => s))].join(', ');
-                let sysInfo = sysNames ? ` <span style="color:#8fa3c7; font-weight:normal;">(${sysNames})</span>` : '';
-
-                mapTooltip.innerHTML = `
-                    <div style="color: var(--accent); font-weight: bold; margin-bottom: 8px; font-size: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px;">📍 Координаты: ${hoveredCell.x}:${hoveredCell.y}${sysInfo}</div>
-                    <div>Игроки: <b style="color: #fff;">${playersAtCoord}</b></div>
-                `;
-
-                mapTooltip.style.left = (e.clientX - rect.left + 15) + 'px';
-                mapTooltip.style.top = (e.clientY - rect.top + 15) + 'px';
-                mapTooltip.style.display = 'block';
-                canvas.style.cursor = 'pointer';
-            } else {
-                mapTooltip.style.display = 'none';
-                canvas.style.cursor = 'grab';
+            if (isRulerMode && rulerStart && !rulerEnd) {
+                drawMap(); // перерисовка линии до курсора
             }
+
+            if (!isRulerMode && !isMapHeatmapMode) {
+                let hoveredCell = null;
+                let minDist = Infinity;
+                let hitRadius = Math.max(5, zoom / 2);
+
+                globalCoordMap.forEach((cell) => {
+                    let sc = worldToScreen(cell.x, cell.y);
+                    let dist = Math.hypot(mouseX - sc.x, mouseY - sc.y);
+                    if (dist < hitRadius && dist < minDist) { minDist = dist; hoveredCell = cell; }
+                });
+
+                if (hoveredCell) {
+                    let playersAtCoord = [...new Set(hoveredCell.items.map(i => i.player))].join(', ');
+                    mapTooltip.innerHTML = `<div style="color: var(--accent); font-weight: bold; margin-bottom: 5px;">📍 ${hoveredCell.x}:${hoveredCell.y}</div><div>Игроки: <b>${playersAtCoord}</b></div>`;
+                    mapTooltip.style.left = (e.clientX - rect.left + 15) + 'px'; mapTooltip.style.top = (e.clientY - rect.top + 15) + 'px';
+                    mapTooltip.style.display = 'block'; canvas.style.cursor = 'pointer';
+                } else {
+                    mapTooltip.style.display = 'none'; canvas.style.cursor = 'grab';
+                }
+            } else { mapTooltip.style.display = 'none'; }
         });
 
-        canvas.addEventListener('mouseup', () => { isDragging = false; canvas.style.cursor = 'grab'; });
-        canvas.addEventListener('mouseleave', () => { isDragging = false; mapTooltip.style.display = 'none'; canvas.style.cursor = 'default'; });
+        canvas.addEventListener('mouseup', (e) => { 
+            isDragging = false; 
+            if(!isRulerMode) canvas.style.cursor = 'grab'; 
+        });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; mapTooltip.style.display = 'none'; });
+
+        canvas.addEventListener('click', (e) => {
+            if (wasDragged) return; 
+            if (isRulerMode) {
+                if (!rulerStart || (rulerStart && rulerEnd)) { rulerStart = currentMouseWorld; rulerEnd = null; } 
+                else { rulerEnd = currentMouseWorld; }
+                drawMap();
+            }
+        });
 
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
             const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
-
             const worldBefore = screenToWorld(mouseX, mouseY);
 
             const zoomFactor = 1.15;
-            if (e.deltaY < 0) { zoom *= zoomFactor; }
-            else { zoom /= zoomFactor; }
-
-            if (zoom < 0.0001) zoom = 0.0001;
-            if (zoom > 100) zoom = 100;
+            if (e.deltaY < 0) zoom *= zoomFactor; else zoom /= zoomFactor;
+            if (zoom < 0.0001) zoom = 0.0001; if (zoom > 100) zoom = 100;
 
             const worldAfter = screenToWorld(mouseX, mouseY);
-
-            camX += (worldBefore.x - worldAfter.x);
-            camY += (worldBefore.y - worldAfter.y);
-
+            camX += (worldBefore.x - worldAfter.x); camY += (worldBefore.y - worldAfter.y);
             mapTooltip.style.display = 'none';
             drawMap();
         }, { passive: false });
@@ -626,205 +606,111 @@
             const input = document.getElementById('mapPlayerInput');
             const pName = input.value.trim();
             if(!pName) return;
-            if(activeMapPlayers.length >= 5) { alert('Максимум 5 игроков на карте!'); return; }
-            if(activeMapPlayers.find(p => p.name.toLowerCase() === pName.toLowerCase())) { alert('Игрок уже добавлен.'); return; }
+            if(activeMapPlayers.length >= 6) { alert('Максимум 6 игроков!'); return; }
+            if(activeMapPlayers.find(p => p.name.toLowerCase() === pName.toLowerCase())) return;
 
-            const btn = input.nextElementSibling;
-            const originalText = btn.innerText;
-            btn.innerText = 'Загрузка...';
+            const originalText = input.nextElementSibling.innerText;
+            input.nextElementSibling.innerText = '...';
 
             try {
                 const res = await fetch(`${API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
-                if(!res.ok) return;
+                if(!res.ok) throw new Error();
                 const data = await res.json();
+                if(data.length === 0) { alert(`Базы игрока не найдены.`); return; }
 
-                if(data.length === 0) { alert(`Объекты игрока "${pName}" не найдены в базе данных.`); btn.innerText = originalText; return; }
-
-                const color = mapColors[activeMapPlayers.length];
-                activeMapPlayers.push({ name: data[0].PlayerName || pName, color: color, tracks: data });
-
-                input.value = '';
-                updateMapLegend();
-                drawMap();
-            } catch(e) {
-                alert('Ошибка соединения при загрузке данных для карты.');
-            } finally {
-                btn.innerText = originalText;
-            }
+                activeMapPlayers.push({ name: data[0].PlayerName || pName, color: mapColors[activeMapPlayers.length], tracks: data });
+                input.value = ''; updateMapLegend(); drawMap();
+            } catch(e) { alert('Ошибка загрузки данных.'); } 
+            finally { input.nextElementSibling.innerText = originalText; }
         }
 
         function removePlayerFromMap(index) {
             activeMapPlayers.splice(index, 1);
-            updateMapLegend();
-            drawMap();
+            updateMapLegend(); drawMap();
         }
 
         function updateMapLegend() {
             const container = document.getElementById('mapLegend');
             container.innerHTML = '';
             activeMapPlayers.forEach((p, i) => {
-                container.innerHTML += `
-                    <div class="legend-item" style="border-left: 3px solid ${p.color}">
-                        <div>
-                            <span class="legend-color" style="background: ${p.color};"></span>
-                            <b style="color:#fff; font-size:14px;">${p.name}</b>
-                            <span style="color:var(--muted); font-size:12px; margin-left:5px;">(${p.tracks.length} шт.)</span>
-                        </div>
-                        <button style="padding: 2px 8px; background: transparent; border: 1px solid var(--red); color: var(--red); cursor: pointer;" onclick="removePlayerFromMap(${i})">✖</button>
-                    </div>
-                `;
+                container.innerHTML += `<div style="background: #1f2d44; padding: 5px 10px; border-radius: 6px; border-left: 3px solid ${p.color}; display: flex; align-items: center; gap: 8px;"><b style="color:#fff; font-size:13px;">${p.name}</b> <span style="color:var(--muted); font-size:11px;">(${p.tracks.length})</span> <button style="padding:0 5px; background:none; color:var(--red); font-size:16px;" onclick="removePlayerFromMap(${i})">×</button></div>`;
             });
         }
 
         function drawMap() {
             if(!canvas) return;
-            const cw = canvas.width;
-            const ch = canvas.height;
-
+            const cw = canvas.width; const ch = canvas.height;
             ctx.clearRect(0, 0, cw, ch);
 
-            // Границы галактики
-            let topC = worldToScreen(0, 480000);
-            let botC = worldToScreen(0, -160000);
-            let leftC = worldToScreen(-320000, 160000);
-            let rightC = worldToScreen(320000, 160000);
-
-            ctx.strokeStyle = '#2a3b5c';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(topC.x, topC.y);
-            ctx.lineTo(rightC.x, rightC.y);
-            ctx.lineTo(botC.x, botC.y);
-            ctx.lineTo(leftC.x, leftC.y);
-            ctx.closePath();
-            ctx.stroke();
-
-            ctx.strokeStyle = '#131a2b';
-            ctx.beginPath();
-            ctx.moveTo(topC.x, topC.y); ctx.lineTo(botC.x, botC.y);
-            ctx.moveTo(leftC.x, leftC.y); ctx.lineTo(rightC.x, rightC.y);
-            ctx.stroke();
-
-            // Динамическая сетка
+            // Отрисовка сетки
             if (zoom > 0.05) {
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath();
+                let step = 10000; if (zoom > 0.5) step = 1000; if (zoom > 5) step = 100; if (zoom > 15) step = 1;
+                let tlWorld = screenToWorld(0, 0); let brWorld = screenToWorld(cw, ch);
+                let startX = Math.floor(Math.min(tlWorld.x, brWorld.x) / step) * step; let endX = Math.ceil(Math.max(tlWorld.x, brWorld.x) / step) * step;
+                let startY = Math.floor(Math.min(tlWorld.y, brWorld.y) / step) * step; let endY = Math.ceil(Math.max(tlWorld.y, brWorld.y) / step) * step;
 
-                let step = 10000;
-                if (zoom > 0.5) step = 1000;
-                if (zoom > 5) step = 100;
-                if (zoom > 15) step = 1;
-
-                let tlWorld = screenToWorld(0, 0);
-                let brWorld = screenToWorld(cw, ch);
-
-                let startX = Math.floor(Math.min(tlWorld.x, brWorld.x) / step) * step;
-                let endX = Math.ceil(Math.max(tlWorld.x, brWorld.x) / step) * step;
-                let startY = Math.floor(Math.min(tlWorld.y, brWorld.y) / step) * step;
-                let endY = Math.ceil(Math.max(tlWorld.y, brWorld.y) / step) * step;
-
-                for (let x = startX; x <= endX; x += step) {
-                    let p1 = worldToScreen(x, Math.min(tlWorld.y, brWorld.y));
-                    let p2 = worldToScreen(x, Math.max(tlWorld.y, brWorld.y));
-                    ctx.moveTo(Math.round(p1.x)-0.5, p1.y); ctx.lineTo(Math.round(p2.x)-0.5, p2.y);
-                }
-                for (let y = startY; y <= endY; y += step) {
-                    let p1 = worldToScreen(Math.min(tlWorld.x, brWorld.x), y);
-                    let p2 = worldToScreen(Math.max(tlWorld.x, brWorld.x), y);
-                    ctx.moveTo(p1.x, Math.round(p1.y)-0.5); ctx.lineTo(p2.x, Math.round(p2.y)-0.5);
-                }
+                for (let x = startX; x <= endX; x += step) { let p1 = worldToScreen(x, 0); ctx.moveTo(Math.round(p1.x)-0.5, 0); ctx.lineTo(Math.round(p1.x)-0.5, ch); }
+                for (let y = startY; y <= endY; y += step) { let p1 = worldToScreen(0, y); ctx.moveTo(0, Math.round(p1.y)-0.5); ctx.lineTo(cw, Math.round(p1.y)-0.5); }
                 ctx.stroke();
             }
 
-            let sun = worldToScreen(0, 0);
-            ctx.fillStyle = '#ffcc00';
-            ctx.beginPath(); ctx.arc(sun.x, sun.y, 4, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#8fa3c7'; ctx.font = `11px Arial`;
-            ctx.fillText('☀️ Sun (0:0)', sun.x + 10, sun.y + 4);
-
-            let bh = worldToScreen(0, 160000);
-            ctx.fillStyle = '#b388ff';
-            ctx.beginPath(); ctx.arc(bh.x, bh.y, 4, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#8fa3c7';
-            ctx.fillText('🕳️ Blackhole', bh.x + 10, bh.y + 4);
+            // Центр и черная дыра
+            let sun = worldToScreen(0, 0); ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(sun.x, sun.y, 4, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#8fa3c7'; ctx.font = `11px Arial`; ctx.fillText('☀️ Sun', sun.x + 8, sun.y + 4);
+            let bh = worldToScreen(0, 160000); ctx.fillStyle = '#b388ff'; ctx.beginPath(); ctx.arc(bh.x, bh.y, 4, 0, Math.PI*2); ctx.fill(); ctx.fillText('🕳️ Center', bh.x + 8, bh.y + 4);
 
             globalCoordMap.clear();
             activeMapPlayers.forEach(p => {
                 p.tracks.forEach(t => {
-                    let key = `${t.X}:${t.Y}`;
-                    if (!globalCoordMap.has(key)) {
-                        globalCoordMap.set(key, { x: t.X, y: t.Y, sys: t.SystemName, items: [] });
-                    }
-
+                    let key = `${t.CurrentX}:${t.CurrentY}`;
+                    if(t.CurrentX === -1) return;
+                    if (!globalCoordMap.has(key)) globalCoordMap.set(key, { x: t.CurrentX, y: t.CurrentY, items: [] });
                     let cell = globalCoordMap.get(key);
-                    if (!cell.items.find(i => i.player === p.name)) {
-                        cell.items.push({ player: p.name, color: p.color });
-                    }
+                    if (!cell.items.find(i => i.player === p.name)) cell.items.push({ player: p.name, color: p.color });
                 });
             });
 
+            // Отрисовка Тепловой карты или Квадратов
             globalCoordMap.forEach((cell) => {
                 let sc = worldToScreen(cell.x, cell.y);
+                if (sc.x < -50 || sc.x > cw+50 || sc.y < -50 || sc.y > ch+50) return;
 
-                let sizePx = zoom;
-
-                if (sizePx < 6) {
-                    sizePx = 6;
-                }
-
-                let half = sizePx / 2;
-                let tlX = sc.x - half;
-                let tlY = sc.y - half;
-
-                if (tlX > cw || tlX + sizePx < 0 || tlY > ch || tlY + sizePx < 0) return;
-
-                tlX = Math.round(tlX);
-                tlY = Math.round(tlY);
-                let w = Math.ceil(sizePx);
-                let h = Math.ceil(sizePx);
-
-                let count = cell.items.length;
-
-                if (count === 1) {
-                    ctx.fillStyle = cell.items[0].color;
-                    ctx.fillRect(tlX, tlY, w, h);
-
-                    ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(tlX, tlY, w, h);
-                } else if (count === 2) {
-                    let halfW = Math.round(w / 2);
-                    ctx.fillStyle = cell.items[0].color;
-                    ctx.fillRect(tlX, tlY, halfW, h);
-
-                    ctx.fillStyle = cell.items[1].color;
-                    ctx.fillRect(tlX + halfW, tlY, w - halfW, h);
-
-                    ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(tlX, tlY, w, h);
-                    ctx.beginPath(); ctx.moveTo(tlX + halfW, tlY); ctx.lineTo(tlX + halfW, tlY + h); ctx.stroke();
+                if (isMapHeatmapMode) {
+                    let r = Math.max(15, zoom * 5);
+                    let grad = ctx.createRadialGradient(sc.x, sc.y, 0, sc.x, sc.y, r);
+                    grad.addColorStop(0, 'rgba(255, 82, 82, 0.8)');
+                    grad.addColorStop(1, 'rgba(255, 82, 82, 0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath(); ctx.arc(sc.x, sc.y, r, 0, Math.PI * 2); ctx.fill();
                 } else {
-                    let halfW = Math.round(w / 2);
-                    let halfH = Math.round(h / 2);
-                    let subSizes = [
-                        { dx: 0,     dy: 0,     sw: halfW,     sh: halfH },
-                        { dx: halfW, dy: 0,     sw: w - halfW, sh: halfH },
-                        { dx: 0,     dy: halfH, sw: halfW,     sh: h - halfH },
-                        { dx: halfW, dy: halfH, sw: w - halfW, sh: h - halfH }
-                    ];
-                    cell.items.forEach((item, idx) => {
-                        let sub = subSizes[idx % 4];
-                        ctx.fillStyle = item.color;
-                        ctx.fillRect(tlX + sub.dx, tlY + sub.dy, sub.sw, sub.sh);
-                    });
-
-                    ctx.strokeStyle = '#0b0f19';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(tlX, tlY, w, h);
+                    let sizePx = Math.max(6, zoom);
+                    let half = sizePx / 2;
+                    let tlX = Math.round(sc.x - half); let tlY = Math.round(sc.y - half);
+                    
+                    ctx.fillStyle = cell.items[0].color;
+                    ctx.fillRect(tlX, tlY, sizePx, sizePx);
+                    ctx.strokeStyle = '#0b0f19'; ctx.strokeRect(tlX, tlY, sizePx, sizePx);
                 }
             });
+
+            // Отрисовка Линейки
+            if (isRulerMode && rulerStart) {
+                ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath();
+                let sStart = worldToScreen(rulerStart.x, rulerStart.y);
+                ctx.moveTo(sStart.x, sStart.y);
+
+                let endPoint = rulerEnd ? rulerEnd : currentMouseWorld;
+                if (endPoint) {
+                    let sEnd = worldToScreen(endPoint.x, endPoint.y);
+                    ctx.lineTo(sEnd.x, sEnd.y); ctx.stroke();
+                    let dist = Math.hypot(endPoint.x - rulerStart.x, endPoint.y - rulerStart.y);
+                    
+                    ctx.fillStyle = 'rgba(11, 15, 25, 0.8)';
+                    ctx.fillRect(sEnd.x + 8, sEnd.y - 20, 100, 22);
+                    ctx.fillStyle = '#ffcc00'; ctx.font = '13px Arial'; ctx.fillText(`📏 ${Math.round(dist)} ед.`, sEnd.x + 12, sEnd.y - 5);
+                }
+                ctx.setLineDash([]);
+            }
         }
     </script>
 </body>
