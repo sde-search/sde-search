@@ -5,137 +5,36 @@
     <title>Radar - OSINT & Map</title>
     <style>
         :root {
-            --bg: #0b0f19;
-            --card: #131a2b;
-            --border: #2a3b5c;
-            --accent: #00ffcc;
-            --text: #fff;
-            --muted: #8fa3c7;
-            --red: #ff5252;
-            --orange: #ff9800;
-            --yellow: #ffcc00;
+            --bg: #0b0f19; --card: #131a2b; --border: #2a3b5c; --accent: #00ffcc;
+            --text: #fff; --muted: #8fa3c7; --red: #ff5252; --orange: #ff9800; --yellow: #ffcc00;
         }
 
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 20px;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: var(--accent); font-size: 24px; margin-bottom: 10px; text-align: center; }
 
-        h1 {
-            color: var(--accent);
-            font-size: 24px;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .status-panel {
-            background: #1f2d44;
-            border: 1px solid var(--border);
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            width: 100%;
-            max-width: 1200px;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .header-filters {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            flex-wrap: wrap;
-            width: 100%;
-            max-width: 1200px;
-            margin-bottom: 20px;
-            background: var(--card);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            box-sizing: border-box;
-        }
-
+        .status-panel { background: #1f2d44; border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; margin-bottom: 20px; width: 100%; max-width: 1200px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        
+        .header-filters { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; width: 100%; max-width: 1200px; margin-bottom: 20px; background: var(--card); padding: 15px; border-radius: 10px; border: 1px solid var(--border); box-sizing: border-box; }
         .header-filters > div { display: flex; flex-direction: column; }
         .header-filters input, .header-filters select { width: 180px; }
 
-        .dashboard-layout {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            width: 100%;
-            max-width: 1200px;
-            align-items: start;
-        }
+        .dashboard-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; max-width: 1200px; align-items: start; }
         @media(max-width: 1000px) { .dashboard-layout { grid-template-columns: 1fr; } }
 
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            box-sizing: border-box;
-            margin-bottom: 20px;
-            width: 100%;
-            max-width: 1200px;
-        }
+        .card { background: var(--card); border: 1px solid var(--border); padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); box-sizing: border-box; margin-bottom: 20px; width: 100%; max-width: 1200px; }
 
         label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 3px; }
-        input, select, textarea {
-            background: #1f2d44;
-            color: var(--text);
-            border: 1px solid var(--border);
-            padding: 9px;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 14px;
-        }
-
-        button {
-            padding: 9px 20px;
-            border: none;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.2s;
-            background: var(--accent);
-            color: var(--bg);
-        }
+        input, select, textarea { background: #1f2d44; color: var(--text); border: 1px solid var(--border); padding: 9px; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { padding: 9px 20px; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; background: var(--accent); color: var(--bg); }
         button:hover { opacity: 0.8; }
         .btn-active { background: var(--yellow) !important; color: #000 !important; }
 
-        .map-container {
-            position: relative;
-            background: #000;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            width: 100%;
-            aspect-ratio: 1/1;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-            image-rendering: pixelated;
-        }
+        .map-container { position: relative; background: #000; border: 1px solid var(--border); border-radius: 8px; width: 100%; aspect-ratio: 1/1; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.8); image-rendering: pixelated; }
         .map-container canvas { width: 100%; height: 100%; display: block; cursor: grab; }
         .map-container canvas:active { cursor: grabbing; }
 
-        .map-tooltip {
-            position: absolute; display: none; background: rgba(19, 26, 43, 0.95);
-            border: 1px solid var(--accent); padding: 12px; border-radius: 8px;
-            color: #fff; font-size: 13px; pointer-events: none; z-index: 100;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.6); white-space: nowrap;
-        }
+        .map-tooltip { position: absolute; display: none; background: rgba(19, 26, 43, 0.95); border: 1px solid var(--accent); padding: 12px; border-radius: 8px; color: #fff; font-size: 13px; pointer-events: none; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.6); white-space: nowrap; }
 
-        /* Матрица активности */
         .heatmap-container { overflow-x: auto; margin-top: 15px; border-radius: 6px; border: 1px solid var(--border); }
         .heatmap-table { border-collapse: collapse; width: 100%; min-width: 700px; }
         .heatmap-table th, .heatmap-table td { border: 1px solid var(--border); padding: 8px 4px; text-align: center; min-width: 32px; font-size: 12px; }
@@ -144,14 +43,10 @@
         .heatmap-cell:hover { transform: scale(1.15); z-index: 10; position: relative; box-shadow: 0 0 8px rgba(0,255,204,0.7); }
         .day-label { background: #1f2d44; color: var(--accent); text-align: left !important; padding-left: 10px !important; font-weight: bold; width: 50px; }
 
-        /* Авторизация */
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .login-card { background: var(--card); border: 1px solid var(--accent); padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); text-align: center; width: 100%; max-width: 320px; box-sizing: border-box; }
         #mainWrapper { display: none; flex-direction: column; align-items: center; width: 100%; }
-
-        .tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; }
     </style>
-
     <script src="config.js"></script>
     <script>
         const originalFetch = window.fetch;
@@ -186,7 +81,7 @@
     </div>
 
     <div id="mainWrapper">
-        <h1>🛰️ Stardust Intelligence Deep Audit</h1>
+        <h1>🛰️ Внешний радар OSINT</h1>
 
         <div class="status-panel" id="serverStatusPanel">
             <div class="status-info"><span style="color: var(--muted);">Подключение к серверу...</span></div>
@@ -270,21 +165,16 @@
                 </div>
             </div>
         </div>
-
-        <div class="card">
-            <h3 style="color: var(--accent); margin-top: 0; font-size: 20px;">📦 Экспорт данных</h3>
-            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-                <a href="#" onclick="downloadFile('/api/download/history', 'bot_history.txt'); return false;" class="btn" style="background: #1f2d44; color: var(--accent); border: 1px solid var(--border); font-size: 13px; padding: 9px 20px; border-radius: 6px; text-decoration: none;">📄 Лог событий (txt)</a>
-                <a href="#" onclick="downloadFile('/api/download/db', 'analytics.db'); return false;" class="btn" style="background: #1f2d44; color: #b388ff; border: 1px solid var(--border); font-size: 13px; padding: 9px 20px; border-radius: 6px; text-decoration: none;">🗄️ База событий (SQLite)</a>
-                <a href="#" onclick="downloadFile('/api/download/intel', 'galaxy_intel.db'); return false;" class="btn" style="background: #1f2d44; color: #ffcc00; border: 1px solid var(--border); font-size: 13px; padding: 9px 20px; border-radius: 6px; text-decoration: none;">🌍 База радара Галактики</a>
-                <a href="#" onclick="downloadFile('/api/download/errors', 'error_log.txt'); return false;" class="btn" style="background: #1f2d44; color: #ff5252; border: 1px solid var(--border); font-size: 13px; padding: 9px 20px; border-radius: 6px; text-decoration: none;">⚠️ Лог ошибок (txt)</a>
-            </div>
-        </div>
     </div>
 
     <script>
         const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thursday': 'Чт', 'Friday': 'Пт', 'Saturday': 'Сб', 'Sunday': 'Вс' };
         let isInitialized = false;
+
+        window.onload = () => {
+            if (sessionStorage.getItem('authToken')) { unlockInterface(); } 
+            else { document.getElementById('loginOverlay').style.display = 'flex'; }
+        };
 
         async function checkAuth() {
             const user = document.getElementById('userInput').value.trim();
@@ -292,7 +182,7 @@
             const token = btoa(user + ':' + pass);
             sessionStorage.setItem('authToken', token);
 
-            const res = await fetch(`${API_BASE_URL}/api/status`);
+            const res = await fetch(`${window.API_BASE_URL}/api/status`);
             if (res.ok) {
                 document.getElementById('loginError').style.display = 'none';
                 unlockInterface();
@@ -305,10 +195,7 @@
         function unlockInterface() {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainWrapper').style.display = 'flex';
-            if (!isInitialized) {
-                init();
-                isInitialized = true;
-            }
+            if (!isInitialized) { init(); isInitialized = true; }
         }
 
         async function init() {
@@ -320,7 +207,6 @@
             const savedType = localStorage.getItem('spy_eventType');
             if(savedType) document.getElementById('eventTypeSelect').value = savedType;
 
-            await loadSystemInfo();
             await loadPlayersList();
 
             const savedPlayer = localStorage.getItem('spy_player');
@@ -335,7 +221,7 @@
         async function checkServerStatus() {
             const panel = document.querySelector('#serverStatusPanel .status-info');
             try {
-                const res = await fetch(`${API_BASE_URL}/api/status`);
+                const res = await fetch(`${window.API_BASE_URL}/api/status`);
                 if (!res.ok) return;
                 const data = await res.json();
                 
@@ -349,18 +235,9 @@
             } catch (e) { panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>'; }
         }
 
-        async function loadSystemInfo() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/info`); 
-                if (!res.ok) return;
-                const info = await res.json();
-                window.systemConfigCache = info; 
-            } catch(e) { }
-        }
-
         async function loadPlayersList() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/players`); 
+                const res = await fetch(`${window.API_BASE_URL}/api/players`); 
                 if (!res.ok) return;
                 const players = await res.json();
                 const select = document.getElementById('playerSelect');
@@ -381,7 +258,7 @@
             loadMatrix(start, end, player, type);
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/events?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`);
+                const res = await fetch(`${window.API_BASE_URL}/api/events?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`);
                 if (!res.ok) return;
                 const data = await res.json();
                 
@@ -401,7 +278,7 @@
 
         async function loadMatrix(start, end, player, type) {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/matrix?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`); 
+                const res = await fetch(`${window.API_BASE_URL}/api/matrix?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`); 
                 if(!res.ok) return;
                 const matrixData = await res.json(); 
                 
@@ -448,7 +325,7 @@
             statsLabel.innerText = '';
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
+                const res = await fetch(`${window.API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
                 if (!res.ok) return;
                 const data = await res.json();
 
@@ -466,7 +343,6 @@
 
                 for (const [playerName, systems] of Object.entries(playersGroup)) {
                     systems.sort((a, b) => a.Distance - b.Distance);
-
                     const minDist = systems[0].Distance;
                     const sysCount = systems.length;
 
@@ -484,12 +360,9 @@
                             <div style="font-size:16px; color:#fff; font-weight:bold;">${playerName}</div>
                             <div style="color:${bColor}; font-weight:bold; font-size:12px; text-align: right;">от ${Math.round(minDist)} сис.</div>
                         </div>
-                        <div style="font-size:13px; color:var(--muted);">
-                            Найдено систем: <span style="color:#fff; font-weight:bold;">${sysCount}</span>
-                        </div>
+                        <div style="font-size:13px; color:var(--muted);">Найдено систем: <span style="color:#fff; font-weight:bold;">${sysCount}</span></div>
                         <div style="text-align: center; margin-top: 5px; font-size: 10px; color: #475569;">Кликни, чтобы развернуть ▼</div>
                     </div>
-
                     <div id="${spoilerId}" style="display: none; grid-column: 1 / -1; background: #0b0f19; border: 1px solid var(--border); padding: 15px; border-radius: 6px; margin-bottom: 5px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
                         <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--accent); font-size: 14px;">Подробный список объектов (${playerName}):</h4>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
@@ -510,17 +383,12 @@
                             </div>
                         `;
                     });
-
-                    html += `
-                        </div>
-                    </div>`;
+                    html += `</div></div>`;
                 }
-
                 resDiv.innerHTML = html;
             } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; }
         }
 
-        // --- ЛОГИКА ИНТЕРАКТИВНОЙ КАРТЫ СИСТЕМ ---
         const mapColors = ['#00ffcc', '#ff5252', '#ff9800', '#4caf50', '#e040fb', '#03a9f4'];
         let activeMapPlayers = [];
         let globalCoordMap = new Map();
@@ -534,7 +402,6 @@
         let lastMouse = { x: 0, y: 0 };
         let currentMouseWorld = null;
 
-        // Режимы
         let isRulerMode = false;
         let rulerStart = null;
         let rulerEnd = null;
@@ -591,9 +458,7 @@
                 return;
             }
 
-            if (isRulerMode && rulerStart && !rulerEnd) {
-                drawMap(); 
-            }
+            if (isRulerMode && rulerStart && !rulerEnd) { drawMap(); }
 
             if (!isRulerMode && !isMapHeatmapMode) {
                 let hoveredCell = null;
@@ -660,7 +525,7 @@
             input.nextElementSibling.innerText = '...';
 
             try {
-                const res = await fetch(`${API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
+                const res = await fetch(`${window.API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
                 if(!res.ok) throw new Error();
                 const data = await res.json();
                 if(data.length === 0) { alert(`Базы игрока не найдены.`); return; }
@@ -680,7 +545,7 @@
             const container = document.getElementById('mapLegend');
             container.innerHTML = '';
             activeMapPlayers.forEach((p, i) => {
-                container.innerHTML += `<div style="background: #1f2d44; padding: 5px 10px; border-radius: 6px; border-left: 3px solid ${p.color}; display: flex; align-items: center; gap: 8px;"><b style="color:#fff; font-size:13px;">${p.name}</b> <span style="color:var(--muted); font-size:11px;">(${p.tracks.length})</span> <button style="padding:0 5px; background:none; color:var(--red); border: none; font-size:16px; cursor: pointer;" onclick="removePlayerFromMap(${i})">×</button></div>`;
+                container.innerHTML += `<div style="background: #1f2d44; padding: 5px 10px; border-radius: 6px; border-left: 3px solid ${p.color}; display: flex; align-items: center; gap: 8px;"><b style="color:#fff; font-size:13px;">${p.name}</b> <span style="color:var(--muted); font-size:11px;">(${p.tracks.length} шт.)</span> <button style="padding:0 5px; background:none; color:var(--red); border: none; font-size:16px; cursor: pointer;" onclick="removePlayerFromMap(${i})">×</button></div>`;
             });
         }
 
@@ -701,7 +566,7 @@
                 ctx.stroke();
             }
 
-            let sun = worldToScreen(0, 0); ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(sun.x, sun.y, 4, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#8fa3c7'; ctx.font = `11px Arial`; ctx.fillText('☀️ Sun', sun.x + 8, sun.y + 4);
+            let sun = worldToScreen(0, 0); ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(sun.x, sun.y, 4, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#8fa3c7'; ctx.font = '11px Arial'; ctx.fillText('☀️ Sun', sun.x + 8, sun.y + 4);
             let bh = worldToScreen(0, 160000); ctx.fillStyle = '#b388ff'; ctx.beginPath(); ctx.arc(bh.x, bh.y, 4, 0, Math.PI*2); ctx.fill(); ctx.fillText('🕳️ Black Hole', bh.x + 8, bh.y + 4);
 
             globalCoordMap.clear();
@@ -753,22 +618,6 @@
                     ctx.fillStyle = '#ffcc00'; ctx.font = '13px Arial'; ctx.fillText(`📏 ${Math.round(dist)} сис.`, sEnd.x + 12, sEnd.y - 5);
                 }
                 ctx.setLineDash([]);
-            }
-        }
-
-        async function downloadFile(endpoint, filename) {
-            try {
-                const res = await fetch(`${API_BASE_URL}${endpoint}`);
-                if (!res.ok) throw new Error();
-                const blob = await res.blob();
-                const link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch(e) {
-                alert("Ошибка скачивания файла. Проверьте авторизацию.");
             }
         }
     </script>
