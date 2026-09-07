@@ -577,9 +577,9 @@
             globalCoordMap.clear();
             activeMapPlayers.forEach(p => {
                 p.tracks.forEach(t => {
-                    let key = `${t.CurrentX}:${t.CurrentY}`;
-                    if(t.CurrentX === -1) return;
-                    if (!globalCoordMap.has(key)) globalCoordMap.set(key, { x: t.CurrentX, y: t.CurrentY, items: [] });
+                    let key = `${t.X}:${t.Y}`;
+                    if(t.X === -1) return;
+                    if (!globalCoordMap.has(key)) globalCoordMap.set(key, { x: t.X, y: t.Y, items: [] });
                     let cell = globalCoordMap.get(key);
                     if (!cell.items.find(i => i.player === p.name)) cell.items.push({ player: p.name, color: p.color });
                 });
