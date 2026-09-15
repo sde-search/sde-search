@@ -30,9 +30,15 @@
 
         for (let i = 0; i < urls.length; i++) {
             try {
+                const fetchConfig = { ...config };
+                if (!fetchConfig.headers) fetchConfig.headers = {};
+                // ngrok free tier blocks non-browser requests without this header
+                if (urls[i].startsWith(BACKUP_API)) {
+                    fetchConfig.headers['ngrok-skip-browser-warning'] = 'true';
+                }
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 8000);
-                const res = await fetch(urls[i], { ...config, signal: controller.signal });
+                const res = await fetch(urls[i], { ...fetchConfig, signal: controller.signal });
                 clearTimeout(timeout);
                 if (res.ok) {
                     if (i === 1) window.API_USE_BACKUP = (urls[0] !== DEFAULT_API + resource);

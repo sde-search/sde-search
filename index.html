@@ -56,7 +56,6 @@
             if (!config.headers) config.headers = {};
             const token = sessionStorage.getItem('authToken');
             if (token) config.headers['Authorization'] = 'Basic ' + token;
-            config.headers['ngrok-skip-browser-warning'] = 'true';
             
             let response = await originalFetch(resource, config);
             if (response.status === 401) {
