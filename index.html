@@ -231,10 +231,13 @@
                 
                 let dbTime = data.lastRadarTime || data.lastEventTime || "-";
                 let radarStatus = data.isScannerRunning ? `<strong style="color: #b388ff;">🔄 Сканирование (${data.scannerProgress}/${data.scannerTotal})</strong>` : `<strong style="color: var(--muted);">Спит</strong>`;
+                const apiSource = data.fallbackMode
+                    ? '<span style="background:#333;color:var(--yellow);padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px;">Резервный</span>'
+                    : '<span style="background:#1a3a2a;color:#00ffcc;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px;">Основной</span>';
                 
                 panel.innerHTML = `
                     <div style="margin-bottom: 4px;"><span style="color: var(--muted);">Свежая запись:</span> <strong style="color: #fff;">${dbTime}</strong></div>
-                    <div><span style="color: var(--muted);">Радар:</span> ${radarStatus} | <span style="color: var(--muted);">Шпион логов:</span> ${data.spyActive ? '<strong style="color:#00ffcc;">Активен</strong>' : '<strong style="color:var(--red);">Остановлен</strong>'}</div>
+                    <div><span style="color: var(--muted);">Радар:</span> ${radarStatus} | <span style="color: var(--muted);">Шпион логов:</span> ${data.spyActive ? '<strong style="color:#00ffcc;">Активен</strong>' : '<strong style="color:var(--red);">Остановлен</strong>'}${apiSource}</div>
                 `;
             } catch (e) { panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>'; }
         }
