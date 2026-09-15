@@ -35,7 +35,11 @@
 
         .map-tooltip { position: absolute; display: none; background: rgba(19, 26, 43, 0.95); border: 1px solid var(--accent); padding: 12px; border-radius: 8px; color: #fff; font-size: 13px; pointer-events: none; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.6); white-space: nowrap; }
 
-        .heatmap-container { overflow-x: auto; margin-top: 15px; border-radius: 6px; border: 1px solid var(--border); }
+        .status-legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; padding: 12px 16px; background: #0b0f19; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; align-items: center; }
+        .status-legend .item { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+        .status-legend .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+        .status-legend .swatch.static { border: 3px solid #fff; background: var(--accent); }
+        .status-legend .swatch.dynamic { background: var(--accent); border: 1px solid #0b0f19; }
         .heatmap-table { border-collapse: collapse; width: 100%; min-width: 700px; }
         .heatmap-table th, .heatmap-table td { border: 1px solid var(--border); padding: 8px 4px; text-align: center; min-width: 32px; font-size: 12px; }
         .heatmap-table th { background: #1f2d44; color: var(--muted); font-weight: normal; }
@@ -155,6 +159,13 @@
                         <div id="mapTooltip" class="map-tooltip"></div>
                     </div>
                     <div id="mapLegend" style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; width: 100%;"></div>
+                    
+                    <!-- Легенда статусов систем -->
+                    <div class="status-legend" id="statusLegend">
+                        <span style="color:var(--accent);font-weight:bold;font-size:14px;">Системы игрока</span>
+                        <div class="item"><span class="swatch static"></span><b>Статичная</b> — 10 и более сканирований подтверждают наличие кораблей в этой системе</div>
+                        <div class="item"><span class="swatch dynamic"></span><b>Новая/В движении</b> — менее 10 последних сканирований подтверждают наличие кораблей</div>
+                    </div>
                 </div>
             </div>
 
@@ -163,15 +174,99 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                         <h2 style="margin:0; font-size:18px; color:var(--accent);">📝 RAW Просмотрщик событий</h2>
                         <button onclick="loadFilteredData()" style="padding: 5px 15px; font-size: 12px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer;">🔄 Обновить логи</button>
-                    </div>
+                        </div>
                     <textarea id="rawLogViewer" style="flex-grow: 1; min-height: 700px; width: 100%; background: #0b0f19; color: #00ffcc; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; resize: vertical;" readonly placeholder="Здесь появятся сырые логи после применения фильтров..."></textarea>
+                </div>
+                
+                <div class="card" style="padding: 20px;">
+                    <h3 style="color: var(--accent); margin-top: 0; font-size: 18px;">🧮 Калькулятор времени в пути</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label>Точка A X:</label>
+                            <input type="number" id="calcAX" placeholder="X1">
+                            <label>Точка A Y:</label>
+                            <input type="number" id="calcAY" placeholder="Y1">
+                        </div>
+                        <div>
+                            <label>Точка B X:</label>
+                            <input type="number" id="calcBX" placeholder="X2">
+                            <label>Точка B Y:</label>
+                            <input type="number" id="calcBY" placeholder="Y2">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; margin: 10px 0;">
+                        <label style="margin:0;">Скорость:</label>
+                        <input type="number" id="calcSpeed" value="19" min="0.3" max="19" step="0.1" style="width: 80px;">
+                        <span style="color: var(--muted);">сис/ч</span>
+                        <button onclick="manualCalc()">🧮 Рассчитать</button>
+                    </div>
+                    <div id="manualResult" style="color: var(--muted); font-size: 14px;">Нажми «Рассчитать» после ввода координат</div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thursday': 'Чт', 'Friday': 'Пт', 'Saturday': 'Сб', 'Sunday': 'Вс' };
+        // ========== Физические константы ==========
+const CELLS_PER_SYSTEM = 63;
+const WARP_CONST = 1200;
+const CELL_SPEED_AT_19 = 62 / (184 - WARP_CONST / 19);
+
+function calcTravelTime(distSys, dx, dy, speed) {
+    const cellDist = distSys * CELLS_PER_SYSTEM;
+    const warps = Math.abs(dx) + Math.abs(dy);
+    const cellSpeed = (speed / 19) * CELL_SPEED_AT_19;
+    const warpTime = WARP_CONST / speed;
+    const nonWarpCells = Math.max(0, cellDist - warps);
+    return nonWarpCells / cellSpeed + warps * warpTime;
+}
+
+// ========== Классификация систем ==========
+const STATUS_STATIC = 'static';
+const STATUS_DYNAMIC = 'dynamic';
+
+function classifyTrack(track) {
+    const pts = [];
+    for (let i = 0; i < 10; i++) {
+        const x = track[`P${i}_X`];
+        const y = track[`P${i}_Y`];
+        const t = track[`P${i}_Time`];
+        if (x != null && y != null && x !== -1 && y !== -1 && t != null && t !== '') {
+            pts.push({ x, y });
+        }
+    }
+    if (pts.length < 10) return STATUS_DYNAMIC;
+    const first = pts[0];
+    const allSame = pts.every(p => p.x === first.x && p.y === first.y);
+    return allSame ? STATUS_STATIC : STATUS_DYNAMIC;
+}
+
+// ========== Вспомогательное ==========
+function humanTime(totalHours) {
+    if (!totalHours || totalHours <= 0 || !isFinite(totalHours)) return { main: '∞', sub: '' };
+    const totalMinutes = Math.floor(totalHours * 60);
+    if (totalMinutes <= 0) return { main: '< 1 мин', sub: '' };
+    const MINUTE = 1, HOUR = 60, DAY = 1440, MONTH = 43829, YEAR = 525949;
+    const years = Math.floor(totalMinutes / YEAR);
+    let rem = totalMinutes % YEAR;
+    const months = Math.floor(rem / MONTH);
+    rem = rem % MONTH;
+    const days = Math.floor(rem / DAY);
+    rem = rem % DAY;
+    const hours = Math.floor(rem / HOUR);
+    const minutes = rem % HOUR;
+    const parts = [];
+    if (years > 0) parts.push(`${years} г`);
+    if (months > 0) parts.push(`${months} мес`);
+    if (days > 0) parts.push(`${days} д`);
+    if (hours > 0) parts.push(`${hours} ч`);
+    if (minutes > 0 || parts.length === 0) parts.push(`${minutes} мин`);
+    const mainParts = parts.slice(0, Math.min(3, parts.length));
+    const subParts = parts.slice(3);
+    return { main: mainParts.join(' '), sub: subParts.length > 0 ? subParts.join(' ') : '' };
+}
+
+const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thursday': 'Чт', 'Friday': 'Пт', 'Saturday': 'Сб', 'Sunday': 'Вс' };
         let isInitialized = false;
 
         window.onload = () => {
@@ -480,8 +575,11 @@
                 });
 
                 if (hoveredCell) {
-                    let playersAtCoord = [...new Set(hoveredCell.items.map(i => i.player))].join(', ');
-                    mapTooltip.innerHTML = `<div style="color: var(--accent); font-weight: bold; margin-bottom: 5px;">📍 ${hoveredCell.x}:${hoveredCell.y}</div><div>Игроки: <b style="color: #fff;">${playersAtCoord}</b></div>`;
+                    let lines = hoveredCell.items.map(i => {
+                        const statusLabel = i.status === STATUS_STATIC ? '🟢 Статичная (10+ сканов)' : '🟠 Новая/В движении';
+                        return `<div style="color:${i.color};">${i.player} — ${statusLabel}</div>`;
+                    }).join('');
+                    mapTooltip.innerHTML = `<div style="color: var(--accent); font-weight: bold; margin-bottom: 5px;">📍 ${hoveredCell.x}:${hoveredCell.y}</div>${lines}`;
                     mapTooltip.style.left = (e.clientX - rect.left + 15) + 'px'; mapTooltip.style.top = (e.clientY - rect.top + 15) + 'px';
                     mapTooltip.style.display = 'block'; canvas.style.cursor = 'pointer';
                 } else {
@@ -538,7 +636,16 @@
                 const data = await res.json();
                 if(data.length === 0) { alert(`Базы игрока не найдены.`); return; }
 
-                activeMapPlayers.push({ name: data[0].PlayerName || pName, color: mapColors[activeMapPlayers.length], tracks: data });
+                activeMapPlayers.push({ name: data[0].PlayerName || pName, color: mapColors[activeMapPlayers.length], tracks: data, stats: {} });
+                
+                // Классификация
+                const st = { static: 0, dynamic: 0 };
+                data.forEach(t => {
+                    const s = classifyTrack(t);
+                    st[s] = (st[s] || 0) + 1;
+                });
+                activeMapPlayers[activeMapPlayers.length - 1].stats = st;
+                
                 input.value = ''; updateMapLegend(); drawMap();
             } catch(e) { alert('Ошибка загрузки данных.'); } 
             finally { input.nextElementSibling.innerText = originalText; }
@@ -553,7 +660,8 @@
             const container = document.getElementById('mapLegend');
             container.innerHTML = '';
             activeMapPlayers.forEach((p, i) => {
-                container.innerHTML += `<div style="background: #1f2d44; padding: 5px 10px; border-radius: 6px; border-left: 3px solid ${p.color}; display: flex; align-items: center; gap: 8px;"><b style="color:#fff; font-size:13px;">${p.name}</b> <span style="color:var(--muted); font-size:11px;">(${p.tracks.length} шт.)</span> <button style="padding:0 5px; background:none; color:var(--red); border: none; font-size:16px; cursor: pointer;" onclick="removePlayerFromMap(${i})">×</button></div>`;
+                const st = p.stats || { static: 0, dynamic: 0 };
+                container.innerHTML += `<div style="background: #1f2d44; padding: 5px 10px; border-radius: 6px; border-left: 3px solid ${p.color}; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><b style="color:#fff; font-size:13px;">${p.name}</b> <span style="color:var(--muted); font-size:11px; display:flex; gap:5px;"><span>${p.tracks.length} сис.</span><span style="color:#fff;">|</span><span style="color:#00ffcc;">${st.static || 0} стат.</span><span style="color:var(--yellow);">${st.dynamic || 0} дин.</span></span> <button style="padding:0 5px; background:none; color:var(--red); border: none; font-size:16px; cursor: pointer;" onclick="removePlayerFromMap(${i})">×</button></div>`;
             });
         }
 
@@ -584,7 +692,7 @@
                     if(t.X === -1) return;
                     if (!globalCoordMap.has(key)) globalCoordMap.set(key, { x: t.X, y: t.Y, items: [] });
                     let cell = globalCoordMap.get(key);
-                    if (!cell.items.find(i => i.player === p.name)) cell.items.push({ player: p.name, color: p.color });
+                    if (!cell.items.find(i => i.player === p.name)) cell.items.push({ player: p.name, color: p.color, status: classifyTrack(t) });
                 });
             });
 
@@ -613,9 +721,19 @@
                         ctx.fillStyle = cell.items[0].color;
                         ctx.fillRect(tlX, tlY, w, h);
 
-                        ctx.strokeStyle = '#0b0f19';
-                        ctx.lineWidth = 1;
-                        ctx.strokeRect(tlX, tlY, w, h);
+                        // Статичная — внешняя яркая рамка
+                        if (cell.items[0].status === STATUS_STATIC) {
+                            ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(tlX - 3, tlY - 3, w + 6, h + 6);
+                            ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(tlX - 4, tlY - 4, w + 8, h + 8);
+                        } else {
+                            ctx.strokeStyle = '#0b0f19';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(tlX, tlY, w, h);
+                        }
                     } else if (count === 2) {
                         let halfW = Math.round(w / 2);
                         ctx.fillStyle = cell.items[0].color;
@@ -667,6 +785,33 @@
                 }
                 ctx.setLineDash([]);
             }
+        }
+
+        function manualCalc() {
+            const ax = parseFloat(document.getElementById('calcAX').value);
+            const ay = parseFloat(document.getElementById('calcAY').value);
+            const bx = parseFloat(document.getElementById('calcBX').value);
+            const by = parseFloat(document.getElementById('calcBY').value);
+            const speed = parseFloat(document.getElementById('calcSpeed').value) || 19.0;
+            if (isNaN(ax) || isNaN(ay) || isNaN(bx) || isNaN(by)) {
+                document.getElementById('manualResult').innerHTML = '<span style="color:var(--red);">Введите все 4 координаты</span>'; return;
+            }
+            const dx = bx - ax, dy = by - ay;
+            const dist = Math.hypot(dx, dy);
+            const tSec = calcTravelTime(dist, dx, dy, speed);
+            const h = tSec / 3600;
+            const hInt = Math.floor(h), mInt = Math.floor((h - hInt) * 60);
+            const warps = Math.abs(dx) + Math.abs(dy);
+            let warn = '';
+            if (speed > 19.0) warn = '<div style="color:var(--red);margin-top:4px;">⚠ Скорость >19.0 — невозможно в игре</div>';
+            if (speed < 0.3) warn = '<div style="color:var(--orange);margin-top:4px;">⚠ Скорость <0.3 — корабль стоит</div>';
+            document.getElementById('manualResult').innerHTML = `
+                <div style="margin-top:5px;"><b>Дистанция:</b> ${dist.toFixed(2)} систем</div>
+                <div><b>Варпов:</b> ${warps}</div>
+                <div><b>Время в пути:</b> ${h.toFixed(2)} ч</div>
+                <div><b>Точное время:</b> ${hInt} ч ${mInt} мин (${tSec.toFixed(0)} с)</div>
+                ${warn}
+            `;
         }
     </script>
 </body>
