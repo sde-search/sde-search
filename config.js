@@ -1,5 +1,6 @@
 (function () {
     const DEFAULT_API = "https://sde.domedome.crazedns.ru";
+    const BACKUP_API  = "http://77.221.149.183:8080";
 
     function getOverride() {
         try {
@@ -18,4 +19,27 @@
     }
 
     window.API_BASE_URL = getOverride() || DEFAULT_API;
+    window.BACKUP_API_BASE_URL = BACKUP_API;
+    window.API_USE_BACKUP = false;
+
+    window.fallbackFetch = async function(resource, config) {
+        if (!config) config = {};
+        const urls = window.API_USE_BACKUP
+            ? [BACKUP_API + resource, DEFAULT_API + resource]
+            : [DEFAULT_API + resource, BACKUP_API + resource];
+
+        for (let i = 0; i < urls.length; i++) {
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 8000);
+                const res = await fetch(urls[i], { ...config, signal: controller.signal });
+                clearTimeout(timeout);
+                if (res.ok) {
+                    if (i === 1) window.API_USE_BACKUP = (urls[0] !== DEFAULT_API + resource);
+                    return res;
+                }
+            } catch(_) {}
+        }
+        throw new Error("API недоступен (основной и резервный)");
+    };
 })();
