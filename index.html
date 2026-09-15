@@ -185,7 +185,7 @@
             const token = btoa(user + ':' + pass);
             sessionStorage.setItem('authToken', token);
 
-            const res = await fetch(`${window.API_BASE_URL}/api/status`);
+            const res = await fallbackFetch(`/api/status`);
             if (res.ok) {
                 document.getElementById('loginError').style.display = 'none';
                 unlockInterface();
@@ -224,7 +224,7 @@
         async function checkServerStatus() {
             const panel = document.querySelector('#serverStatusPanel .status-info');
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/status`);
+                const res = await fallbackFetch(`/api/status`);
                 if (!res.ok) return;
                 const data = await res.json();
                 
@@ -240,7 +240,7 @@
 
         async function loadPlayersList() {
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/players`); 
+                const res = await fallbackFetch(`/api/players`); 
                 if (!res.ok) return;
                 const players = await res.json();
                 const select = document.getElementById('playerSelect');
@@ -261,7 +261,7 @@
             loadMatrix(start, end, player, type);
 
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/events?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`);
+                const res = await fallbackFetch(`/api/events?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`);
                 if (!res.ok) return;
                 const data = await res.json();
                 
@@ -281,7 +281,7 @@
 
         async function loadMatrix(start, end, player, type) {
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/matrix?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`); 
+                const res = await fallbackFetch(`/api/matrix?start=${start}&end=${end}&player=${encodeURIComponent(player)}&type=${encodeURIComponent(type)}`); 
                 if(!res.ok) return;
                 const matrixData = await res.json(); 
                 
@@ -328,7 +328,7 @@
             statsLabel.innerText = '';
 
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
+                const res = await fallbackFetch(`/api/global-nearest?x=${x}&y=${y}&minDist=${md}&maxDist=${maxD}&ignorePlayers=${encodeURIComponent(ignPlayers)}`);
                 if (!res.ok) return;
                 const data = await res.json();
 
@@ -530,7 +530,7 @@
             input.nextElementSibling.innerText = '...';
 
             try {
-                const res = await fetch(`${window.API_BASE_URL}/api/player-tracks?player=${encodeURIComponent(pName)}`);
+                const res = await fallbackFetch(`/api/player-tracks?player=${encodeURIComponent(pName)}`);
                 if(!res.ok) throw new Error();
                 const data = await res.json();
                 if(data.length === 0) { alert(`Базы игрока не найдены.`); return; }
