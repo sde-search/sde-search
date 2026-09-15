@@ -1,6 +1,6 @@
 (function () {
     const DEFAULT_API = "https://sde.domedome.crazedns.ru";
-    const BACKUP_API  = "http://77.221.149.183:8080";
+    const BACKUP_API  = "https://brewery-anyone-calibrate.ngrok-free.dev";
 
     function getOverride() {
         try {
