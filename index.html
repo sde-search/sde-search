@@ -453,7 +453,7 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                         const val = matrixData[day] && matrixData[day][i] ? matrixData[day][i] : 0; 
                         let bgColor = 'var(--card)'; 
                         if(val > 0) {
-                            const intensity = val > 0 ? Math.log(val + 1) / Math.log(maxVal + 1) : 0; 
+                            const intensity = val > 0 ? Math.pow(val / maxVal, 0.4) : 0; 
                             bgColor = `rgba(0, 255, 204, ${intensity})`;
                         } 
                         html += `<td class="heatmap-cell" style="background-color: ${bgColor};" title="Событий: ${val}"></td>`;
