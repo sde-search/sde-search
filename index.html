@@ -35,6 +35,34 @@
 
         .map-tooltip { position: absolute; display: none; background: rgba(19, 26, 43, 0.95); border: 1px solid var(--accent); padding: 12px; border-radius: 8px; color: #fff; font-size: 13px; pointer-events: none; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.6); white-space: nowrap; }
 
+        #rulerHoverInfo {
+            position: absolute; display: none; background: rgba(11,15,25,0.92); border: 1px solid var(--yellow);
+            padding: 8px 14px; border-radius: 8px; color: #fff; font-size: 14px; pointer-events: none;
+            z-index: 110; white-space: nowrap; box-shadow: 0 2px 12px rgba(0,0,0,0.7);
+        }
+        #rulerHoverInfo .coord { color: var(--yellow); font-weight: bold; font-size: 15px; }
+        #rulerHoverInfo .players { color: var(--muted); font-size: 12px; margin-top: 2px; }
+        #rulerHoverInfo .player-tag { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+        #rulerHoverInfo .stat-tag { display: inline-block; width: 8px; height: 8px; border: 2px solid #fff; border-radius: 2px; margin-right: 4px; }
+
+        #rulerCalcPanel {
+            position: absolute; display: none; background: rgba(19,26,43,0.97); border: 2px solid var(--yellow);
+            padding: 16px 20px; border-radius: 10px; color: #fff; font-size: 14px; z-index: 200;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.8); min-width: 280px; backdrop-filter: blur(4px); pointer-events: auto;
+        }
+        #rulerCalcPanel h3 { margin:0 0 12px 0; color:var(--yellow); font-size:16px; display:flex; justify-content:space-between; align-items:center; }
+        #rulerCalcPanel .row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:10px; }
+        #rulerCalcPanel .row label { margin:0; min-width:80px; }
+        #rulerCalcPanel .val { font-weight:bold; color:#fff; text-align:right; }
+        #rulerCalcPanel input[type=range] { -webkit-appearance:none; width:100%; height:6px; background:var(--border); border-radius:3px; outline:none; margin:8px 0; }
+        #rulerCalcPanel input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--yellow); cursor:pointer; }
+        #rulerCalcPanel .result-box { background:#0b0f19; border:1px solid var(--border); border-radius:6px; padding:12px; margin-top:8px; text-align:center; }
+        #rulerCalcPanel .result-box .big-time { font-size:28px; font-weight:bold; color:var(--accent); }
+        #rulerCalcPanel .result-box .sub-time { color:var(--muted); font-size:13px; margin-top:2px; }
+        #rulerCalcPanel .warn { color:var(--red); font-size:12px; display:none; margin-top:4px; }
+        #rulerCalcPanel .close-btn { background:transparent; border:1px solid var(--muted); color:var(--muted); padding:2px 10px; font-size:12px; cursor:pointer; border-radius:4px; }
+        #rulerCalcPanel .close-btn:hover { color:var(--red); border-color:var(--red); }
+
         .status-legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; padding: 12px 16px; background: #0b0f19; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; align-items: center; }
         .status-legend .item { display: flex; align-items: center; gap: 8px; color: var(--muted); }
         .status-legend .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
@@ -157,6 +185,19 @@
                     <div class="map-container">
                         <canvas id="galaxyMap" width="800" height="800"></canvas>
                         <div id="mapTooltip" class="map-tooltip"></div>
+                        <div id="rulerHoverInfo"></div>
+                        <div id="rulerCalcPanel">
+                            <h3>⏱ Время в пути <button class="close-btn" onclick="this.parentElement.parentElement.style.display='none'">✕</button></h3>
+                            <div class="row"><label>Дистанция:</label><span class="val" id="distDisplay">—</span></div>
+                            <label style="text-align:center;margin-bottom:2px;">Скорость: <span id="speedVal" style="color:var(--yellow);">19.0</span> сис/ч</label>
+                            <input type="range" id="speedSlider" min="0.3" max="19.0" step="0.1" value="19.0">
+                            <div class="result-box">
+                                <div style="color:var(--muted);font-size:12px;">Время в пути</div>
+                                <div class="big-time" id="travelHuman">—</div>
+                                <div class="sub-time" id="travelNote" style="color:var(--accent);font-weight:bold;"></div>
+                            </div>
+                            <div class="warn" id="speedWarn"></div>
+                        </div>
                     </div>
                     <div id="mapLegend" style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; width: 100%;"></div>
                     
@@ -554,6 +595,14 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
         const canvas = document.getElementById('galaxyMap');
         const ctx = canvas.getContext('2d');
         const mapTooltip = document.getElementById('mapTooltip');
+        const rulerHoverDiv = document.getElementById('rulerHoverInfo');
+        const calcPanel = document.getElementById('rulerCalcPanel');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValEl = document.getElementById('speedVal');
+        const distDisplay = document.getElementById('distDisplay');
+        const travelHuman = document.getElementById('travelHuman');
+        const travelNote = document.getElementById('travelNote');
+        const speedWarn = document.getElementById('speedWarn');
 
         let camX = 0; let camY = 0; let zoom = 0.00125;
         let isDragging = false; let wasDragged = false;
@@ -568,16 +617,34 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
         const worldToScreen = (wx, wy) => ({ x: (wx - camX) * zoom + canvas.width / 2, y: (camY - wy) * zoom + canvas.height / 2 });
         const screenToWorld = (sx, sy) => ({ x: (sx - canvas.width / 2) / zoom + camX, y: camY - (sy - canvas.height / 2) / zoom });
 
+        // ========== Step / Snap ==========
+        function getStep() {
+            let step = 10000;
+            if (zoom > 0.5) step = 1000;
+            if (zoom > 5) step = 100;
+            if (zoom > 15) step = 1;
+            return step;
+        }
+        function snapToSystem(wx, wy) {
+            const rx = Math.round(wx), ry = Math.round(wy);
+            if (Math.abs(rx - wx) < 0.5 && Math.abs(ry - wy) < 0.5) return { x: rx, y: ry };
+            return { x: wx, y: wy };
+        }
+
         function toggleRuler() {
             isRulerMode = !isRulerMode;
             const btn = document.getElementById('btnRuler');
             if(isRulerMode) {
                 btn.classList.add('btn-active');
                 rulerStart = null; rulerEnd = null;
+                calcPanel.style.display = 'none';
+                rulerHoverDiv.style.display = 'none';
                 canvas.style.cursor = 'crosshair';
             } else {
                 btn.classList.remove('btn-active');
                 rulerStart = null; rulerEnd = null;
+                calcPanel.style.display = 'none';
+                rulerHoverDiv.style.display = 'none';
                 canvas.style.cursor = 'grab';
             }
             drawMap();
@@ -617,8 +684,31 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                 return;
             }
 
-            if (isRulerMode && rulerStart && !rulerEnd) {
-                scheduleDrawMap();
+            // Режим линейки: превью координат + игроки + статус
+            if (isRulerMode) {
+                const snapped = snapToSystem(currentMouseWorld.x, currentMouseWorld.y);
+                const rx = Math.round(snapped.x), ry = Math.round(snapped.y);
+                const key = rx + ':' + ry;
+                const cell = globalCoordMap.get(key);
+                let playerHtml = '';
+                if (cell && cell.items.length > 0) {
+                    const lines = cell.items.map(i => {
+                        if (i.status === STATUS_STATIC)
+                            return `<span><span class="stat-tag" style="background:${i.color};"></span>${i.player}</span>`;
+                        else
+                            return `<span><span class="player-tag" style="background:${i.color};"></span>${i.player}</span>`;
+                    }).join(' · ');
+                    playerHtml = `<div class="players">${lines}</div>`;
+                }
+                rulerHoverDiv.innerHTML = `<div class="coord">📍 ${rx}:${ry}</div>${playerHtml}`;
+                const px = (e.clientX - rect.left) + 18;
+                const py = (e.clientY - rect.top) + 12;
+                rulerHoverDiv.style.left = Math.min(px, rect.width - 200) + 'px';
+                rulerHoverDiv.style.top = Math.min(py, rect.height - 60) + 'px';
+                rulerHoverDiv.style.display = 'block';
+
+                if (rulerStart && !rulerEnd) scheduleDrawMap();
+                return;
             }
 
             if (!isRulerMode && !isMapHeatmapMode) {
@@ -650,14 +740,23 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
             isDragging = false; 
             if(!isRulerMode) canvas.style.cursor = 'grab'; 
         });
-        canvas.addEventListener('mouseleave', () => { isDragging = false; mapTooltip.style.display = 'none'; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; mapTooltip.style.display = 'none'; rulerHoverDiv.style.display = 'none'; });
 
         canvas.addEventListener('click', (e) => {
-            if (wasDragged) return; 
+            if (wasDragged) return;
             if (isRulerMode) {
-                if (!rulerStart || (rulerStart && rulerEnd)) { rulerStart = currentMouseWorld; rulerEnd = null; } 
-                else { rulerEnd = currentMouseWorld; }
-                drawMap();
+                const snapped = snapToSystem(currentMouseWorld.x, currentMouseWorld.y);
+                if (!rulerStart || (rulerStart && rulerEnd)) {
+                    rulerStart = snapped; rulerEnd = null;
+                    calcPanel.style.display = 'none';
+                    scheduleDrawMap();
+                } else {
+                    rulerEnd = snapped;
+                    rulerHoverDiv.style.display = 'none';
+                    updateCalc();
+                    scheduleDrawMap();
+                }
+                return;
             }
         });
 
@@ -677,6 +776,38 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
             mapTooltip.style.display = 'none';
             scheduleDrawMap();
         }, { passive: false });
+
+        // ========== Ruler Calc Panel ==========
+        function updateCalc() {
+            if (!rulerStart || !rulerEnd) { calcPanel.style.display = 'none'; return; }
+            const dx = rulerEnd.x - rulerStart.x;
+            const dy = rulerEnd.y - rulerStart.y;
+            const dist = Math.hypot(dx, dy);
+            const speed = parseFloat(speedSlider.value);
+            distDisplay.textContent = dist.toFixed(2) + ' сис.';
+            speedValEl.textContent = speed.toFixed(1);
+            speedWarn.style.display = 'none';
+            if (speed < 0.3) { speedWarn.textContent = '⚠ Ниже минимальной (0.3). Корабль стоит.'; speedWarn.style.display = 'block'; }
+            if (speed > 19.0) { speedWarn.textContent = '⚠ Превышает макс. скорость (19.0). Невозможно!'; speedWarn.style.display = 'block'; }
+            if (speed > 0 && dist > 0) {
+                const tSec = calcTravelTime(dist, dx, dy, speed);
+                const t = humanTime(tSec / 3600);
+                const warps = Math.abs(dx) + Math.abs(dy);
+                travelHuman.textContent = t.main;
+                travelNote.textContent = `🔄 ${warps} варпов, ${(tSec/60).toFixed(1)} мин`;
+            } else { travelHuman.textContent = '∞'; travelNote.textContent = ''; }
+            // Позиционирование рядом с точкой B
+            const rect = canvas.getBoundingClientRect();
+            const sEnd = worldToScreen(rulerEnd.x, rulerEnd.y);
+            let px = sEnd.x * (rect.width / canvas.width) + 20;
+            let py = sEnd.y * (rect.height / canvas.height) - 180;
+            if (px + 310 > rect.width) px = Math.max(10, rect.width - 310);
+            if (py < 10) py = 10;
+            calcPanel.style.left = px + 'px';
+            calcPanel.style.top = py + 'px';
+            calcPanel.style.display = 'block';
+        }
+        speedSlider.addEventListener('input', updateCalc);
 
         // ========== requestAnimationFrame debounce для drawMap ==========
         let _drawFrameId = null;
@@ -853,21 +984,46 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
             });
 
             if (isRulerMode && rulerStart) {
-                ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.beginPath();
-                let sStart = worldToScreen(rulerStart.x, rulerStart.y);
-                ctx.moveTo(sStart.x, sStart.y);
+                const ss = worldToScreen(rulerStart.x, rulerStart.y);
+                ctx.beginPath(); ctx.arc(ss.x, ss.y, 5, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1; ctx.stroke();
 
-                let endPoint = rulerEnd ? rulerEnd : currentMouseWorld;
-                if (endPoint) {
-                    let sEnd = worldToScreen(endPoint.x, endPoint.y);
-                    ctx.lineTo(sEnd.x, sEnd.y); ctx.stroke();
-                    let dist = Math.hypot(endPoint.x - rulerStart.x, endPoint.y - rulerStart.y);
-                    
-                    ctx.fillStyle = 'rgba(11, 15, 25, 0.8)';
-                    ctx.fillRect(sEnd.x + 8, sEnd.y - 24, 110, 26);
-                    ctx.fillStyle = '#ffcc00'; ctx.font = 'bold 15px Arial'; ctx.fillText(`📏 ${Math.round(dist)} сис.`, sEnd.x + 12, sEnd.y - 6);
+                ctx.fillStyle = 'rgba(11,15,25,0.8)';
+                const aLX = ss.x + 12, aLY = ss.y - 8 - 20;
+                ctx.fillRect(aLX, aLY, 95, 20);
+                ctx.fillStyle = '#aaa'; ctx.font = 'bold 12px monospace';
+                ctx.fillText(`A ${Math.round(rulerStart.x)}:${Math.round(rulerStart.y)}`, aLX + 5, aLY + 14);
+
+                ctx.strokeStyle = 'rgba(255,204,0,0.85)'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.beginPath();
+                ctx.moveTo(ss.x, ss.y);
+
+                const rawEnd = rulerEnd ? rulerEnd : (currentMouseWorld ? currentMouseWorld : null);
+                if (rawEnd) {
+                    const snappedEnd = rulerEnd ? rulerEnd : snapToSystem(rawEnd.x, rawEnd.y);
+                    const se = worldToScreen(snappedEnd.x, snappedEnd.y);
+                    ctx.lineTo(se.x, se.y); ctx.stroke(); ctx.setLineDash([]);
+
+                    ctx.beginPath(); ctx.arc(se.x, se.y, 5, 0, Math.PI*2);
+                    ctx.fillStyle = rulerEnd ? '#ffcc00' : 'rgba(255,204,0,0.5)'; ctx.fill();
+                    ctx.strokeStyle = rulerEnd ? '#ffcc00' : 'rgba(255,204,0,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+
+                    if (rulerEnd) {
+                        const bLX = se.x - 95 - 4, bLY = se.y - 8 - 20;
+                        ctx.fillStyle = 'rgba(11,15,25,0.8)';
+                        ctx.fillRect(bLX, bLY, 95, 20);
+                        ctx.fillStyle = '#aaa'; ctx.font = 'bold 12px monospace';
+                        ctx.fillText(`B ${Math.round(rulerEnd.x)}:${Math.round(rulerEnd.y)}`, bLX + 5, bLY + 14);
+
+                        const midX = (ss.x + se.x) / 2, midY = (ss.y + se.y) / 2;
+                        const dist = Math.hypot(rulerEnd.x - rulerStart.x, rulerEnd.y - rulerStart.y);
+                        ctx.fillStyle = 'rgba(11,15,25,0.85)';
+                        ctx.fillRect(midX - 48, midY - 30, 96, 22);
+                        ctx.fillStyle = '#ffcc00'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center';
+                        ctx.fillText('📏 ' + Math.round(dist) + ' сис.', midX, midY - 14);
+                        ctx.textAlign = 'start';
+                    }
                 }
-                ctx.setLineDash([]);
             }
         }
 
