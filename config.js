@@ -32,18 +32,21 @@
     };
 
     function cacheKey(resource) {
-        return resource.split('?')[0].replace(/\/+$/, '');
+        return resource.replace(/\/+$/, '');
     }
 
     function getCached(key) {
+        // Отсекаем query-параметры для поиска в CACHE_TTL
+        const baseKey = key.split('?')[0];
         const entry = window._apiCache.get(key);
         if (!entry) return null;
-        const ttl = CACHE_TTL[key] || CACHE_TTL['default'];
+        const ttl = CACHE_TTL[baseKey] || CACHE_TTL['default'];
         if (Date.now() - entry.timestamp > ttl) {
             window._apiCache.delete(key);
             return null;
         }
-        return entry.data;
+        // Клонируем response, т.к. .json()/text() потребляет тело
+        return entry.data.clone();
     }
 
     function setCached(key, data) {
