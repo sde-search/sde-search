@@ -225,7 +225,24 @@ function calcTravelTime(distSys, dx, dy, speed) {
 const STATUS_STATIC = 'static';
 const STATUS_DYNAMIC = 'dynamic';
 
+// Мемоизация classifyTrack: track -> status
+// Инвалидируем при изменении треков или добавлении игрока
+const _classifyCache = new Map();
+let _classifyCacheVersion = 0;
+
 function classifyTrack(track) {
+    // Строим ключ по P0-P9 (все поля, что влияют на результат)
+    let key = '';
+    for (let i = 0; i < 10; i++) {
+        key += (track[`P${i}_X`] ?? '_') + ',' + (track[`P${i}_Y`] ?? '_') + ',' + (track[`P${i}_Time`] ?? '_') + '|';
+    }
+    // Привязываемся к версии кэша (сбрасывается при addPlayerToMap)
+    const fullKey = _classifyCacheVersion + ':' + key;
+
+    if (_classifyCache.has(fullKey)) {
+        return _classifyCache.get(fullKey);
+    }
+
     const pts = [];
     for (let i = 0; i < 10; i++) {
         const x = track[`P${i}_X`];
@@ -235,10 +252,20 @@ function classifyTrack(track) {
             pts.push({ x, y });
         }
     }
-    if (pts.length < 10) return STATUS_DYNAMIC;
+    if (pts.length < 10) {
+        _classifyCache.set(fullKey, STATUS_DYNAMIC);
+        return STATUS_DYNAMIC;
+    }
     const first = pts[0];
     const allSame = pts.every(p => p.x === first.x && p.y === first.y);
-    return allSame ? STATUS_STATIC : STATUS_DYNAMIC;
+    const result = allSame ? STATUS_STATIC : STATUS_DYNAMIC;
+    _classifyCache.set(fullKey, result);
+    return result;
+}
+
+function invalidateClassifyCache() {
+    _classifyCache.clear();
+    _classifyCacheVersion++;
 }
 
 // ========== Вспомогательное ==========
@@ -310,17 +337,41 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
             const savedPlayer = localStorage.getItem('spy_player');
             if(savedPlayer) document.getElementById('playerSelect').value = savedPlayer;
 
+            // Параллельный старт: статус + данные + карта
             checkServerStatus();
             loadFilteredData();
             drawMap();
-            setInterval(checkServerStatus, 5000);
+            // Status polling с увеличенным интервалом и exponential backoff
+            startStatusPolling();
+        }
+
+        // ========== Status Polling с exponential backoff ==========
+        let _statusPollTimer = null;
+        let _statusPollInterval = 30000; // 30 секунд — вместо 5с
+        let _statusPollFailCount = 0;
+
+        function startStatusPolling() {
+            function tick() {
+                checkServerStatus().then(success => {
+                    if (success) {
+                        _statusPollFailCount = 0;
+                        _statusPollInterval = 30000; // сброс к норме
+                    } else {
+                        _statusPollFailCount++;
+                        // exponential backoff: 30s → 60s → 120s → макс 300s
+                        _statusPollInterval = Math.min(300000, 30000 * Math.pow(2, _statusPollFailCount));
+                    }
+                    _statusPollTimer = setTimeout(tick, _statusPollInterval);
+                });
+            }
+            _statusPollTimer = setTimeout(tick, _statusPollInterval);
         }
 
         async function checkServerStatus() {
             const panel = document.querySelector('#serverStatusPanel .status-info');
             try {
                 const res = await fallbackFetch(`/api/status`);
-                if (!res.ok) return;
+                if (!res.ok) return false;
                 const data = await res.json();
                 
                 let dbTime = data.lastRadarTime || data.lastEventTime || "-";
@@ -333,7 +384,11 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                     <div style="margin-bottom: 4px;"><span style="color: var(--muted);">Свежая запись:</span> <strong style="color: #fff;">${dbTime}</strong></div>
                     <div><span style="color: var(--muted);">Радар:</span> ${radarStatus} | <span style="color: var(--muted);">Шпион логов:</span> ${data.spyActive ? '<strong style="color:#00ffcc;">Активен</strong>' : '<strong style="color:var(--red);">Остановлен</strong>'}${apiSource}</div>
                 `;
-            } catch (e) { panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>'; }
+                return true;
+            } catch (e) {
+                panel.innerHTML = '<strong style="color: var(--red);">❌ API недоступен</strong>';
+                return false;
+            }
         }
 
         async function loadPlayersList() {
@@ -344,7 +399,7 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                 const select = document.getElementById('playerSelect');
                 select.innerHTML = '<option value="ALL">-- Все игроки --</option>';
                 players.forEach(p => { const opt = document.createElement('option'); opt.value = p; opt.textContent = p; select.appendChild(opt); });
-            } catch(e) { }
+            } catch(e) { console.warn('[SDE] loadPlayersList failed:', e); }
         }
 
         async function loadFilteredData() {
@@ -374,7 +429,7 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                 });
                 document.getElementById('rawLogViewer').value = rawText;
                 
-            } catch(e) { }
+            } catch(e) { console.warn('[SDE] loadFilteredData events failed:', e); }
         }
 
         async function loadMatrix(start, end, player, type) {
@@ -408,7 +463,7 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                 html += '</tbody></table>'; 
                 html += `<div style="margin-top: 15px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 12px; color: var(--muted);"><span>Активность:</span><span style="display:inline-block; width: 14px; height: 14px; background: var(--card); border: 1px solid var(--border);"></span> <span style="margin-right: 10px;">Нет</span><span style="display:inline-block; width: 14px; height: 14px; background: rgba(0, 255, 204, 0.2);"></span> <span style="margin-right: 5px;">Меньше</span><span style="display:inline-block; width: 30px; height: 14px; background: linear-gradient(90deg, rgba(0,255,204,0.2) 0%, rgba(0,255,204,1) 100%);"></span><span style="display:inline-block; width: 14px; height: 14px; background: rgba(0, 255, 204, 1);"></span> <span>Больше</span></div>`; 
                 container.innerHTML = html;
-            } catch(e) {}
+            } catch(e) { console.warn('[SDE] loadMatrix failed:', e); }
         }
 
         async function searchTargets() {
@@ -487,12 +542,14 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                     html += `</div></div>`;
                 }
                 resDiv.innerHTML = html;
-            } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; }
+            } catch (e) { resDiv.innerHTML = '<span style="color:var(--red);">Ошибка соединения с сервером.</span>'; console.warn('[SDE] searchTargets failed:', e); }
         }
 
         const mapColors = ['#00ffcc', '#ff5252', '#ff9800', '#4caf50', '#e040fb', '#03a9f4'];
         let activeMapPlayers = [];
         let globalCoordMap = new Map();
+        // Флаг: координаты построены? перестраивать только по событию
+        let _coordMapBuilt = false;
 
         const canvas = document.getElementById('galaxyMap');
         const ctx = canvas.getContext('2d');
@@ -555,12 +612,13 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                 camX -= dx / zoom; camY += dy / zoom;
                 lastMouse = { x: mouseX, y: mouseY };
                 mapTooltip.style.display = 'none';
-                drawMap();
+                // requestAnimationFrame debounce встроен в drawMap
+                scheduleDrawMap();
                 return;
             }
 
             if (isRulerMode && rulerStart && !rulerEnd) {
-                drawMap(); 
+                scheduleDrawMap();
             }
 
             if (!isRulerMode && !isMapHeatmapMode) {
@@ -617,8 +675,18 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
             const worldAfter = screenToWorld(mouseX, mouseY);
             camX += (worldBefore.x - worldAfter.x); camY += (worldBefore.y - worldAfter.y);
             mapTooltip.style.display = 'none';
-            drawMap();
+            scheduleDrawMap();
         }, { passive: false });
+
+        // ========== requestAnimationFrame debounce для drawMap ==========
+        let _drawFrameId = null;
+        function scheduleDrawMap() {
+            if (_drawFrameId) return; // уже запланирован
+            _drawFrameId = requestAnimationFrame(() => {
+                _drawFrameId = null;
+                drawMap();
+            });
+        }
 
         async function addPlayerToMap() {
             const input = document.getElementById('mapPlayerInput');
@@ -638,6 +706,9 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
 
                 activeMapPlayers.push({ name: data[0].PlayerName || pName, color: mapColors[activeMapPlayers.length], tracks: data, stats: {} });
                 
+                // Сброс мемоизации — данные изменились
+                invalidateClassifyCache();
+                
                 // Классификация
                 const st = { static: 0, dynamic: 0 };
                 data.forEach(t => {
@@ -646,13 +717,17 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                 });
                 activeMapPlayers[activeMapPlayers.length - 1].stats = st;
                 
+                // Перестроить coordMap — данные изменились
+                _coordMapBuilt = false;
+                
                 input.value = ''; updateMapLegend(); drawMap();
-            } catch(e) { alert('Ошибка загрузки данных.'); } 
+            } catch(e) { alert('Ошибка загрузки данных.'); console.warn('[SDE] addPlayerToMap failed:', e); } 
             finally { input.nextElementSibling.innerText = originalText; }
         }
 
         function removePlayerFromMap(index) {
             activeMapPlayers.splice(index, 1);
+            _coordMapBuilt = false; // перестроить при следующей отрисовке
             updateMapLegend(); drawMap();
         }
 
@@ -663,6 +738,21 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                 const st = p.stats || { static: 0, dynamic: 0 };
                 container.innerHTML += `<div style="background: #1f2d44; padding: 5px 10px; border-radius: 6px; border-left: 3px solid ${p.color}; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><b style="color:#fff; font-size:13px;">${p.name}</b> <span style="color:var(--muted); font-size:11px; display:flex; gap:5px;"><span>${p.tracks.length} сис.</span><span style="color:#fff;">|</span><span style="color:#00ffcc;">${st.static || 0} стат.</span><span style="color:var(--yellow);">${st.dynamic || 0} дин.</span></span> <button style="padding:0 5px; background:none; color:var(--red); border: none; font-size:16px; cursor: pointer;" onclick="removePlayerFromMap(${i})">×</button></div>`;
             });
+        }
+
+        // ========== Координатная карта: строится только при изменении данных ==========
+        function buildCoordMap() {
+            globalCoordMap.clear();
+            activeMapPlayers.forEach(p => {
+                p.tracks.forEach(t => {
+                    let key = `${t.X}:${t.Y}`;
+                    if(t.X === -1) return;
+                    if (!globalCoordMap.has(key)) globalCoordMap.set(key, { x: t.X, y: t.Y, items: [] });
+                    let cell = globalCoordMap.get(key);
+                    if (!cell.items.find(i => i.player === p.name)) cell.items.push({ player: p.name, color: p.color, status: classifyTrack(t) });
+                });
+            });
+            _coordMapBuilt = true;
         }
 
         function drawMap() {
@@ -685,16 +775,10 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
             let sun = worldToScreen(0, 0); ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(sun.x, sun.y, 4, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#8fa3c7'; ctx.font = '11px Arial'; ctx.fillText('☀️ Sun', sun.x + 8, sun.y + 4);
             let bh = worldToScreen(0, 160000); ctx.fillStyle = '#b388ff'; ctx.beginPath(); ctx.arc(bh.x, bh.y, 4, 0, Math.PI*2); ctx.fill(); ctx.fillText('🕳️ Black Hole', bh.x + 8, bh.y + 4);
 
-            globalCoordMap.clear();
-            activeMapPlayers.forEach(p => {
-                p.tracks.forEach(t => {
-                    let key = `${t.X}:${t.Y}`;
-                    if(t.X === -1) return;
-                    if (!globalCoordMap.has(key)) globalCoordMap.set(key, { x: t.X, y: t.Y, items: [] });
-                    let cell = globalCoordMap.get(key);
-                    if (!cell.items.find(i => i.player === p.name)) cell.items.push({ player: p.name, color: p.color, status: classifyTrack(t) });
-                });
-            });
+            // Перестроить coordMap только если данные изменились
+            if (!_coordMapBuilt) {
+                buildCoordMap();
+            }
 
             globalCoordMap.forEach((cell) => {
                 let sc = worldToScreen(cell.x, cell.y);
