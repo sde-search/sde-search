@@ -417,7 +417,7 @@ const daysRu = { 'Monday': 'Пн', 'Tuesday': 'Вт', 'Wednesday': 'Ср', 'Thur
                 
                 let dbTime = data.lastRadarTime || data.lastEventTime || "-";
                 let radarStatus = data.isScannerRunning ? `<strong style="color: #b388ff;">🔄 Сканирование (${data.scannerProgress}/${data.scannerTotal})</strong>` : `<strong style="color: var(--muted);">Спит</strong>`;
-                const apiSource = data.fallbackMode
+                const apiSource = window.API_USE_BACKUP
                     ? '<span style="background:#333;color:var(--yellow);padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px;">Резервный</span>'
                     : '<span style="background:#1a3a2a;color:#00ffcc;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px;">Основной</span>';
                 
