@@ -51,7 +51,22 @@
         window._apiCache.set(key, { data, timestamp: Date.now() });
     }
 
-    // fallbackFetch: параллельный пробник с быстрым таймаутом
+    // Лог переключений между DEFAULT и BACKUP API
+    window._apiSwitchLog = [];
+
+    function _logSwitch(from, to, reason, resource) {
+        const entry = {
+            time: new Date().toISOString(),
+            from: from,
+            to: to,
+            reason: reason,
+            resource: resource
+        };
+        window._apiSwitchLog.push(entry);
+        console.warn(`[SDE SWITCH] ${from}→${to}: ${reason} (${resource})`);
+        // Держим не больше 200 записей
+        if (window._apiSwitchLog.length > 200) window._apiSwitchLog.shift();
+    }
     window.fallbackFetch = async function(resource, config) {
         if (!config) config = {};
 
@@ -64,15 +79,16 @@
             }
         }
 
-        const urls = window.API_USE_BACKUP
+        const useBackup = window.API_USE_BACKUP;
+        const urls = useBackup
             ? [BACKUP_API + resource, DEFAULT_API + resource]
             : [DEFAULT_API + resource, BACKUP_API + resource];
+        const names = useBackup ? ['BACKUP', 'DEFAULT'] : ['DEFAULT', 'BACKUP'];
 
         // Таймауты: DEFAULT — 5с, BACKUP — 4с (быстрее, т.к. резерв)
-        const timeouts = window.API_USE_BACKUP ? [4000, 5000] : [5000, 4000];
+        const timeouts = useBackup ? [4000, 5000] : [5000, 4000];
 
-        // Проба последовательная (так проще контролировать CORS),
-        // но с сокращёнными таймаутами
+        let lastError = null;
         for (let i = 0; i < urls.length; i++) {
             try {
                 const fetchConfig = { ...config };
@@ -88,8 +104,21 @@
                 clearTimeout(timeout);
 
                 if (res.ok) {
-                    if (i === 1) {
-                        window.API_USE_BACKUP = (urls[0] !== DEFAULT_API + resource);
+                    // Переключились на резерв?
+                    if (i === 0 && useBackup) {
+                        // Уже на BACKUP, всё ок
+                    } else if (i === 1 && !useBackup) {
+                        // Первый не ответил, ответил второй (BACKUP)
+                        _logSwitch('DEFAULT', 'BACKUP', 'down', resource);
+                        window.API_USE_BACKUP = true;
+                    } else if (i === 0 && !useBackup) {
+                        // Первый (DEFAULT) ответил — всё хорошо
+                    } else if (i === 1 && useBackup) {
+                        // BACKUP не ответил, DEFAULT ответил — обратное переключение
+                        if (window.API_USE_BACKUP) {
+                            _logSwitch('BACKUP', 'DEFAULT', 'recovered', resource);
+                            window.API_USE_BACKUP = false;
+                        }
                     }
                     // Кэшируем успешный ответ
                     if (!config.noCache && (!config.method || config.method === 'GET')) {
@@ -98,8 +127,13 @@
                     }
                     return res;
                 }
-            } catch(_) {}
+                lastError = new Error(`HTTP ${res.status}`);
+            } catch(e) {
+                lastError = e;
+            }
         }
+        // Оба не ответили — логируем аварию
+        _logSwitch(names[0], names[1], 'both_down: ' + (lastError ? lastError.message : 'unknown'), resource);
         throw new Error("API недоступен (основной и резервный)");
     };
 })();
