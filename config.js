@@ -69,10 +69,31 @@
         if (window._apiSwitchLog.length > 200) window._apiSwitchLog.shift();
     }
 
+    // === Прогрев соединения: подогреваем DNS + TLS + CORS preflight
+    // Вызывается из index.html (checkAuth() и onload) перед unlockInterface(),
+    // чтобы параллельные запросы в init() не спотыкались о cold-start + CORS preflight.
+    window.warmupAPIConnection = function() {
+        try {
+            const token = sessionStorage.getItem('authToken');
+            if (!token) return;
+            // Прогреваем основные пути — каждый вызывает свой CORS preflight (OPTIONS)
+            const paths = ['/api/status', '/api/players'];
+            paths.forEach(function(p) {
+                const c = new AbortController();
+                setTimeout(function() { c.abort(); }, 10000);
+                fetch(DEFAULT_API + p, {
+                    headers: { 'Authorization': 'Basic ' + token, 'ngrok-skip-browser-warning': 'true' },
+                    signal: c.signal,
+                    mode: 'cors'
+                }).catch(function() {});
+            });
+        } catch(_) {}
+    };
+
     // --- fallbackFetch: ВСЕГДА DEFAULT ПЕРВЫМ ---
     //
     // Логика:
-    // 1. Пробуем DEFAULT (3с таймаут)
+    // 1. Пробуем DEFAULT (8с таймаут — холодный старт с CORS preflight требует времени)
     // 2. Если DEFAULT не ответил — пробуем BACKUP (5с таймаут)
     // 3. Если DEFAULT ответил — возвращаем, сбрасываем флаг на false
     // 4. Если BACKUP ответил — возвращаем, ставим флаг на true
@@ -92,8 +113,7 @@
             }
         }
 
-        // Всегда пробуем DEFAULT первым (3с)
-        // Если упал — BACKUP (5с)
+        // Всегда пробуем DEFAULT первым (8с — холодный старт с CORS preflight)
         let defaultResult = null;
         let defaultError = null;
 
@@ -101,7 +121,7 @@
             const fetchConfig = { ...config };
             if (!fetchConfig.headers) fetchConfig.headers = {};
             const controller = new AbortController();
-            const timeout = setTimeout(function() { controller.abort(); }, 3000);
+            const timeout = setTimeout(function() { controller.abort(); }, 8000);
             const res = await fetch(DEFAULT_API + resource, { ...fetchConfig, signal: controller.signal });
             clearTimeout(timeout);
             defaultResult = res;
